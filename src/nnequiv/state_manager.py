@@ -13,7 +13,7 @@ from nnequiv.equivalence_properties import EquivalenceProperty
 from nnequiv.global_state import GLOBAL_STATE
 from nnequiv.refinement import Refinement
 from nnequiv.zono_state import ZonoState
-
+from nnequiv.equivalence_properties import Settings as NNEquivSettings
 """
 Wrapper object (legacy reasons, might be removed soon)
 """
@@ -129,31 +129,31 @@ class StateManager:
             GLOBAL_STATE.FINISHED_FRAC += el.state.workload
             Timers.tic("refine_limit_computation")
             if (
-                Settings.EQUIV_OVERAPPROX_STRAT_REFINE_UNTIL
-                and Settings.EQUIV_OVERAPPROX_STRAT != "REFINE_UNTIL_LAST"
+                NNequivSettings.EQUIV_OVERAPPROX_STRAT_REFINE_UNTIL
+                and NNequivSettings.EQUIV_OVERAPPROX_STRAT != "REFINE_UNTIL_LAST"
             ):
                 refine_count = len(el.state.branching)
                 if (
                     len(self.refinement_counts)
-                    >= Settings.EQUIV_OVERAPPROX_STRAT_MOVING_WINDOW
+                    >= NNequivSettings.EQUIV_OVERAPPROX_STRAT_MOVING_WINDOW
                 ):
                     self.refinement_counts.pop()
                 self.refinement_counts.appendleft(refine_count)
-            if Settings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_MAX":
+            if NNequivSettings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_MAX":
                 GLOBAL_STATE.REFINE_LIMIT = max(self.refinement_counts)
-            elif Settings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_95P":
+            elif NNequivSettings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_95P":
                 sorted_counts = list(self.refinement_counts)
                 sorted_counts.sort()
                 index = min(
                     len(sorted_counts) - 1,
-                    floor(Settings.EQUIV_OVERAPPROX_STRAT_MOVING_WINDOW * 0.95),
+                    floor(NNequivSettings.EQUIV_OVERAPPROX_STRAT_MOVING_WINDOW * 0.95),
                 )
                 GLOBAL_STATE.REFINE_LIMIT = sorted_counts[index]
-            elif Settings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_LAST":
+            elif NNequivSettings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_LAST":
                 GLOBAL_STATE.REFINE_LIMIT = len(el.state.branching)
-            elif Settings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_LAST_OPTIMISTIC1":
+            elif NNequivSettings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_LAST_OPTIMISTIC1":
                 GLOBAL_STATE.REFINE_LIMIT = len(el.state.branching) - 1
-            elif Settings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_LAST_OPTIMISTIC2":
+            elif NNequivSettings.EQUIV_OVERAPPROX_STRAT == "REFINE_UNTIL_LAST_OPTIMISTIC2":
                 GLOBAL_STATE.REFINE_LIMIT = len(el.state.branching) - 2
             Timers.toc("refine_limit_computation")
         Timers.toc("StateManager.check")
@@ -187,10 +187,10 @@ class StateManager:
                 return (False, False)
         else:
             # print(f"\n[EQUIV] {data[0]}\n")
-            if Settings.EQUIV_OVERAPPROX_STRAT == "CEGAR":
+            if NNequivSettings.EQUIV_OVERAPPROX_STRAT == "CEGAR":
                 GLOBAL_STATE.REFINE_DEPTH.append(len(el.state.branching))
                 GLOBAL_STATE.REFINE_BRANCHING.append(el.state.branching)
-            if Settings.EQUIV_OVERAPPROX_STRAT == "OPTIMAL":
+            if NNequivSettings.EQUIV_OVERAPPROX_STRAT == "OPTIMAL":
                 GLOBAL_STATE.REFINE_DEPTH.pop(0)
                 GLOBAL_STATE.REFINE_BRANCHING.pop(0)
             Timers.toc("StateManager.valid_result")

@@ -10,7 +10,7 @@ from nnenum.settings import Settings
 from nnenum.timerutil import Timers
 from nnenum.zonotope import Zonotope
 from nnequiv.global_state import GLOBAL_STATE
-
+from nnequiv.equivalence_properties.settings import Settings as NNEquivSettings
 """
 Encapsulates the Split Decision.
 DNC(=DON'T CARE) is used for object comparison
@@ -294,12 +294,12 @@ class ZonoState:
         if index is None:
             Timers.toc("zono_state_split_decision")
             return None
-        if Settings.EQUIV_OVERAPPROX_STRAT == "DONT":
+        if NNequivSettings.EQUIV_OVERAPPROX_STRAT == "DONT":
             Timers.toc("zono_state_split_decision")
             return SplitPoint(
                 self.cur_network, self.cur_layer, index, SplitDecision.BOTH
             )
-        elif Settings.EQUIV_OVERAPPROX_STRAT == "OPTIMAL":
+        elif NNequivSettings.EQUIV_OVERAPPROX_STRAT == "OPTIMAL":
             if len(self.branching) < GLOBAL_STATE.REFINE_DEPTH[0]:
                 Timers.toc("zono_state_split_decision")
                 return SplitPoint(
@@ -310,9 +310,9 @@ class ZonoState:
                 Timers.toc("zono_state_split_decision")
                 return None
         elif (
-            Settings.EQUIV_OVERAPPROX_STRAT == "CEGAR"
-            or Settings.EQUIV_OVERAPPROX_STRAT == "SECOND_NET"
-            or Settings.EQUIV_OVERAPPROX_STRAT_REFINE_UNTIL
+            NNequivSettings.EQUIV_OVERAPPROX_STRAT == "CEGAR"
+            or NNequivSettings.EQUIV_OVERAPPROX_STRAT == "SECOND_NET"
+            or NNequivSettings.EQUIV_OVERAPPROX_STRAT_REFINE_UNTIL
         ):
             cur_split_point = SplitPoint(
                 self.cur_network, self.cur_layer, index, SplitDecision.DNC
@@ -322,10 +322,10 @@ class ZonoState:
                 return self.do_branching
             else:
                 if (
-                    Settings.EQUIV_OVERAPPROX_STRAT == "SECOND_NET"
+                    NNequivSettings.EQUIV_OVERAPPROX_STRAT == "SECOND_NET"
                     and self.cur_network == 0
                 ) or (
-                    Settings.EQUIV_OVERAPPROX_STRAT_REFINE_UNTIL
+                    NNequivSettings.EQUIV_OVERAPPROX_STRAT_REFINE_UNTIL
                     and len(self.branching) < (GLOBAL_STATE.REFINE_LIMIT)
                 ):
                     Timers.toc("zono_state_split_decision")
@@ -575,7 +575,7 @@ class ZonoState:
         # branching_list = self.get_branching_list()
         # rv = ZonoState(self.network_count, do_branching=branching_list)
         # rv.from_init_zono(self.initial_zono)
-        if Settings.EQUIV_OVERAPPROX_STRAT == "OPTIMAL":
+        if NNequivSettings.EQUIV_OVERAPPROX_STRAT == "OPTIMAL":
             print(self.branching)
             print(GLOBAL_STATE.REFINE_BRANCHING[0])
         rv = self.before_overapprox
