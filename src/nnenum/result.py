@@ -1,14 +1,15 @@
-'''Enumeration result object definition
+"""Enumeration result object definition
 
 This defines the object returned by enumerate_network
-'''
+"""
 
 import multiprocessing
 
 from nnenum.util import Freezable
 
+
 class Result(Freezable):
-    'computation result object'
+    "computation result object"
 
     manager = multiprocessing.Manager()
 
@@ -49,12 +50,14 @@ class Result(Freezable):
 
             ###### below are assigned used if spec is not None and property is unsafe ######
             # counter-example boolean flags
-            self.found_counterexample = multiprocessing.Value('i', 0)
-            self.found_confirmed_counterexample = multiprocessing.Value('i', 0) # found counter-example with concrete input
+            self.found_counterexample = multiprocessing.Value("i", 0)
+            self.found_confirmed_counterexample = multiprocessing.Value(
+                "i", 0
+            )  # found counter-example with concrete input
 
             # concrete counter-example input and output
-            self.coutput = multiprocessing.Array('d', nn.get_num_outputs())
-            self.cinput = multiprocessing.Array('d', nn.get_num_inputs())
+            self.coutput = multiprocessing.Array("d", nn.get_num_outputs())
+            self.cinput = multiprocessing.Array("d", nn.get_num_inputs())
         else:
             # types may be different hmmm...
             self.polys = None

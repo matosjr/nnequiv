@@ -1,8 +1,8 @@
-'''
+"""
 Measurement script for ACAS Xu networks. Runs all benchmarks and produces a summary file in the results folder.
 
 Stanley Bak, 2020
-'''
+"""
 
 import os
 import sys
@@ -14,8 +14,9 @@ from termcolor import cprint
 from nnenum.settings import Settings
 from acasxu_single import verify_acasxu
 
+
 def main():
-    'main entry point'
+    "main entry point"
 
     start = time.time()
 
@@ -24,8 +25,8 @@ def main():
     Settings.SPLIT_IF_IDLE = False
     Settings.PRINT_OVERAPPROX_OUTPUT = False
 
-    full_filename = 'results/full_acasxu.dat'
-    hard_filename = 'results/hard_acasxu.dat'
+    full_filename = "results/full_acasxu.dat"
+    hard_filename = "results/hard_acasxu.dat"
 
     if len(sys.argv) > 1:
         Settings.TIMEOUT = 60 * float(sys.argv[1])
@@ -45,16 +46,18 @@ def main():
     instances.append(["3", "3", "9"])
     instances.append(["4", "5", "10"])
 
-    acasxu_hard = [["4", "6", "1"],
-                   ["4", "8", "1"],
-                   ["3", "3", "2"],
-                   ["4", "2", "2"],
-                   ["4", "9", "2"],
-                   ["5", "3", "2"],
-                   ["3", "6", "3"],
-                   ["5", "1", "3"],
-                   ["1", "9", "7"],
-                   ["3", "3", "9"]]
+    acasxu_hard = [
+        ["4", "6", "1"],
+        ["4", "8", "1"],
+        ["3", "3", "2"],
+        ["4", "2", "2"],
+        ["4", "9", "2"],
+        ["5", "3", "2"],
+        ["3", "6", "3"],
+        ["5", "1", "3"],
+        ["1", "9", "7"],
+        ["3", "3", "9"],
+    ]
 
     Path("./results").mkdir(parents=True, exist_ok=True)
 
@@ -67,7 +70,9 @@ def main():
                 res_str = "none"
                 secs = -1
 
-                cprint(f"\nRunning net {a_prev}-{tau} with spec {spec}", "grey", "on_green")
+                cprint(
+                    f"\nRunning net {a_prev}-{tau} with spec {spec}", "grey", "on_green"
+                )
 
                 if spec == "7":
                     # ego / 10 processes is beter for deep counterexamples in prop 7
@@ -76,7 +81,9 @@ def main():
 
                     # property 7 is nondeterministic due to work sharing among processes... use median of 10 runs
                     pretimeout = Settings.TIMEOUT
-                    Settings.TIMEOUT = min(5, pretimeout) # smaller timeout to make it go faster
+                    Settings.TIMEOUT = min(
+                        5, pretimeout
+                    )  # smaller timeout to make it go faster
                     runs = 10
                     print(f"\nTrying median of {runs} quick runs")
                     results = []
@@ -88,7 +95,7 @@ def main():
 
                     results.sort()
                     print(f"results: {results}")
-                    secs, res_str = results[runs // 2] # median
+                    secs, res_str = results[runs // 2]  # median
 
                     print(f"Median: {secs}, {res_str}")
 
@@ -100,7 +107,7 @@ def main():
                 else:
                     Settings.BRANCH_MODE = Settings.BRANCH_OVERAPPROX
                     Settings.NUM_PROCESSES = len(os.sched_getaffinity(0))
-                    
+
                     res_str, secs = verify_acasxu(net_pair, spec)
 
                 s = f"{a_prev}_{tau}\t{spec}\t{res_str}\t{secs}"
@@ -116,5 +123,6 @@ def main():
 
     print(f"Completed all measurements in {round(mins, 2)} minutes")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

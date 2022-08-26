@@ -1,4 +1,3 @@
-
 import gurobipy as grb
 import numpy as np
 
@@ -10,31 +9,33 @@ class LpInstance:
 
     def __init__(self, other_lpi=None):
         if other_lpi is None:
-            self.lp = grb.Model('model')
+            self.lp = grb.Model("model")
         else:
             self.lp = other_lpi.lp.copy()
 
-        self.lp.setParam('TimeLimit', Settings.GLPK_TIMEOUT)
+        self.lp.setParam("TimeLimit", Settings.GLPK_TIMEOUT)
 
     def __del__(self):
-        if hasattr(self, 'lp') and self.lp is not None:
+        if hasattr(self, "lp") and self.lp is not None:
             if not isinstance(self.lp, tuple):
                 del self.lp
             self.lp = None
 
     def serialize(self, check_constraints_sense=False):
         model = self.lp
-        sense = model.getAttr('ModelSense') # 1: minimize, -1: maximize
-        numVars = model.getAttr('NumVars')
+        sense = model.getAttr("ModelSense")  # 1: minimize, -1: maximize
+        numVars = model.getAttr("NumVars")
 
         if check_constraints_sense:
             for c in model.getConstrs():
                 if not c.sense == grb.GRB.LESS_EQUAL:
-                    raise ValueError(f'Constraint sense {c.sense} not implemented!' +
-                                     ' Method assumes only <=')
+                    raise ValueError(
+                        f"Constraint sense {c.sense} not implemented!"
+                        + " Method assumes only <="
+                    )
 
         A = model.getA()
-        b = np.array(model.getAttr('RHS'))
+        b = np.array(model.getAttr("RHS"))
 
         lbs = []
         ubs = []
@@ -54,9 +55,11 @@ class LpInstance:
         A, b, lbs, ubs, objs, types, sense, numVars, modelName = self.lp
         model = grb.Model(modelName)
 
-        x = model.addMVar(shape=numVars, lb=lbs, ub=ubs, obj=objs, vtype=types, name='x')
-        model.addConstr(A @ x <= b, name='c')  # TODO: what about >= or == constraints?
-        model.setAttr('ModelSense', sense)
+        x = model.addMVar(
+            shape=numVars, lb=lbs, ub=ubs, obj=objs, vtype=types, name="x"
+        )
+        model.addConstr(A @ x <= b, name="c")  # TODO: what about >= or == constraints?
+        model.setAttr("ModelSense", sense)
         model.update()
 
         self.lp = model
@@ -65,20 +68,21 @@ class LpInstance:
         self.lp.getVars()[col].lb = lb
         self.lp.getVars()[col].ub = ub
 
-
     def get_num_rows(self):
-        return self.lp.getAttr('NumConstrs')
+        return self.lp.getAttr("NumConstrs")
 
     def get_num_cols(self):
-        return self.lp.getAttr('NumVars')
+        return self.lp.getAttr("NumVars")
 
     def add_rows_less_equal(self, rhs_vec):
-        raise NotImplementedError('What is this supposed to do?'  +
-                                  ' Add constraints without variables' +
-                                  ' and just rhs makes no sense???')
+        raise NotImplementedError(
+            "What is this supposed to do?"
+            + " Add constraints without variables"
+            + " and just rhs makes no sense???"
+        )
 
     def get_types(self):
-        '''get constraint types. (==, <=, >=)'''
+        """get constraint types. (==, <=, >=)"""
         types = []
         for c in self.lp.getConstrs():
             types.append(c.sense)
@@ -92,7 +96,7 @@ class LpInstance:
         raise NotImplementedError()
 
     def add_double_bounded_cols(self, names, lb, ub):
-        '''add variables to the model with common lower and upper bound'''
+        """add variables to the model with common lower and upper bound"""
         model = self.lp
         for name in names:
             model.addVar(lb, ub, name=name)
@@ -105,7 +109,7 @@ class LpInstance:
         return alpha_min
 
     def add_dense_row(self, vec, rhs, normalize=True):
-        '''add constraint row <= rhs, where row is dense array'''
+        """add constraint row <= rhs, where row is dense array"""
 
         if normalize:
             norm = np.linalg.norm(vec)
@@ -115,7 +119,7 @@ class LpInstance:
         # model.addMContr() requires Matrix as input
         lhs = np.expand_dims(vec, axis=0)
         rhs = np.array([rhs])
-        self.lp.addMConstr(lhs, self.lp.getVars(), '<=', rhs)
+        self.lp.addMConstr(lhs, self.lp.getVars(), "<=", rhs)
 
         # TODO: could be removed, when it is ensured that optimize() is called next
         self.lp.update()
@@ -124,10 +128,10 @@ class LpInstance:
         raise NotImplementedError()
 
     def get_rhs(self, row_indices=None):
-        '''get rhs vector of the constraints
+        """get rhs vector of the constraints
         row_indices - a list of row indices, None=all
         returns an np.array of rhs values for the requested indices
-        '''
+        """
         rhss = []
         for c in self.lp.getConstrs():
             rhss.append(c.RHS)
@@ -144,13 +148,13 @@ class LpInstance:
         raise NotImplementedError()
 
     def get_constraints_csr(self):
-        '''get lp matrix as a scipy.sparse.csr_matrix'''
+        """get lp matrix as a scipy.sparse.csr_matrix"""
         return self.lp.getA()
 
     def is_feasible(self):
-        '''check if the lp is feasible
+        """check if the lp is feasible
 
-        returns a feasible point or None'''
+        returns a feasible point or None"""
         # TODO: doesn't this return a boolean???
         return self.minimize(None, fail_on_unsat=False, use_exact=False) is not None
 
@@ -167,22 +171,24 @@ class LpInstance:
         self.lp.setMObjective(None, direction, 0, xc=self.lp.getVars())
         self.lp.update()
 
-    def reset_basis(self, basis_type='std'):
+    def reset_basis(self, basis_type="std"):
         raise NotImplementedError()
 
     def minimize(self, direction_vec, fail_on_unsat=True, use_exact=False):
-        '''minimize the lp, returning a list of assignments to each of the variables.
+        """minimize the lp, returning a list of assignments to each of the variables.
 
         if direction_vec is not None, will first assign optimization direction
 
         !!!fail_on_unsat and use_exact are not supported right now!!!
 
-        returns None if UNSAT, otherwise the optimization result'''
+        returns None if UNSAT, otherwise the optimization result"""
 
-        assert not isinstance(self.lp, tuple), 'self.lp was a tuple. Did you call lpi.deserialize()?'
+        assert not isinstance(
+            self.lp, tuple
+        ), "self.lp was a tuple. Did you call lpi.deserialize()?"
 
         if direction_vec is None:
-            direction_vec = np.zeros(self.lp.getAttr('NumVars'))
+            direction_vec = np.zeros(self.lp.getAttr("NumVars"))
 
         self.set_minimize_direction(direction_vec)
 
@@ -190,16 +196,18 @@ class LpInstance:
         #    self.reset_basis()
 
         if use_exact:
-            raise NotImplementedError('Gurobi has no exact simplex method!')
+            raise NotImplementedError("Gurobi has no exact simplex method!")
         else:
             self.lp.optimize()
-            opt_status = self.lp.getAttr('Status')
+            opt_status = self.lp.getAttr("Status")
 
             if fail_on_unsat:
-                assert opt_status == grb.GRB.OPTIMAL, f'[Gurobi] Optimization failed with status code {opt_status}!'
+                assert (
+                    opt_status == grb.GRB.OPTIMAL
+                ), f"[Gurobi] Optimization failed with status code {opt_status}!"
 
             if opt_status == grb.GRB.OPTIMAL:
-                sol = np.array(self.lp.getAttr('X'))
+                sol = np.array(self.lp.getAttr("X"))
             else:
                 sol = None
 

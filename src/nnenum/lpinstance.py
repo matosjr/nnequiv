@@ -1,8 +1,8 @@
-'''
+"""
 Stanley Bak
 May 2018
 GLPK python interface using swiglpk
-'''
+"""
 
 import sys
 import math
@@ -18,20 +18,21 @@ from nnenum.util import Freezable
 from nnenum.timerutil import Timers
 from nnenum.settings import Settings
 
-def get_lp_params(alternate_lp_params=False):
-    'get the lp params object'
 
-    if not hasattr(get_lp_params, 'obj'):
+def get_lp_params(alternate_lp_params=False):
+    "get the lp params object"
+
+    if not hasattr(get_lp_params, "obj"):
         params = glpk.glp_smcp()
         glpk.glp_init_smcp(params)
 
-        #params.msg_lev = glpk.GLP_MSG_ERR
+        # params.msg_lev = glpk.GLP_MSG_ERR
         params.msg_lev = glpk.GLP_MSG_ERR
         params.meth = glpk.GLP_PRIMAL if Settings.GLPK_FIRST_PRIMAL else glpk.GLP_DUAL
 
         params.tm_lim = int(Settings.GLPK_TIMEOUT * 1000)
-        params.out_dly = 2 * 1000 # start printing to terminal delay
-        
+        params.out_dly = 2 * 1000  # start printing to terminal delay
+
         get_lp_params.obj = params
 
         # make alternative params
@@ -41,56 +42,57 @@ def get_lp_params(alternate_lp_params=False):
         params2.msg_lev = glpk.GLP_MSG_ON
 
         params2.tm_lim = int(Settings.GLPK_TIMEOUT * 1000)
-        params2.out_dly = 1 * 1000 # start printing to terminal status after 1 secs
-        
+        params2.out_dly = 1 * 1000  # start printing to terminal status after 1 secs
+
         get_lp_params.alt_obj = params2
-        
+
     if alternate_lp_params:
-        #glpk.glp_term_out(glpk.GLP_ON)
+        # glpk.glp_term_out(glpk.GLP_ON)
         rv = get_lp_params.alt_obj
     else:
-        #glpk.glp_term_out(glpk.GLP_OFF)
+        # glpk.glp_term_out(glpk.GLP_OFF)
         rv = get_lp_params.obj
 
     return rv
 
+
 class LpInstance(Freezable):
-    'Linear programming wrapper using glpk (through swiglpk python interface)'
+    "Linear programming wrapper using glpk (through swiglpk python interface)"
 
     lp_time_limit_sec = 15.0
 
     def __init__(self, other_lpi=None):
-        'initialize the lp instance'
+        "initialize the lp instance"
 
-        self.lp = glpk.glp_create_prob() # pylint: disable=invalid-name
-        
+        self.lp = glpk.glp_create_prob()  # pylint: disable=invalid-name
+
         if other_lpi is None:
             # internal bookkeeping
-            self.names = [] # column names
+            self.names = []  # column names
 
             # setup lp params
         else:
             # initialize from other lpi
             self.names = other_lpi.names.copy()
-                
-            Timers.tic('glp_copy_prob')
+
+            Timers.tic("glp_copy_prob")
             glpk.glp_copy_prob(self.lp, other_lpi.lp, glpk.GLP_OFF)
-            Timers.toc('glp_copy_prob')
+            Timers.toc("glp_copy_prob")
 
         self.freeze_attrs()
 
     def __del__(self):
-        if hasattr(self, 'lp') and self.lp is not None:
+        if hasattr(self, "lp") and self.lp is not None:
 
             if not isinstance(self.lp, tuple):
                 glpk.glp_delete_prob(self.lp)
-                
+
             self.lp = None
 
     def serialize(self):
-        'serialize self.lp from a glpk instance into a tuple'
+        "serialize self.lp from a glpk instance into a tuple"
 
-        Timers.tic('serialize')
+        Timers.tic("serialize")
 
         # get constraints as csr matrix
         lp_rows = self.get_num_rows()
@@ -106,15 +108,15 @@ class LpInstance(Freezable):
         for row in range(lp_rows):
             got_len = glpk.glp_get_mat_row(self.lp, row + 1, inds_row, vals_row)
 
-            for i in range(1, got_len+1):
+            for i in range(1, got_len + 1):
                 data.append(vals_row[i])
                 glpk_indices.append(inds_row[i])
 
             indptr.append(len(data))
-            
+
         # rhs
         rhs = []
-        
+
         for row in range(lp_rows):
             assert glpk.glp_get_row_type(self.lp, row + 1) == glpk.GLP_UP
 
@@ -126,30 +128,34 @@ class LpInstance(Freezable):
         glpk.glp_delete_prob(self.lp)
         self.lp = (data, glpk_indices, indptr, rhs, col_bounds)
 
-        Timers.toc('serialize')
+        Timers.toc("serialize")
 
     # removed this, as get_col_bounds shouldn't be used externally
     def set_col_bounds(self, col, lb, ub):
-       'set double-bounded column bounds'
+        "set double-bounded column bounds"
 
-       col_type = glpk.glp_get_col_type(self.lp, col + 1)
+        col_type = glpk.glp_get_col_type(self.lp, col + 1)
 
-       if col_type != glpk.GLP_DB:
-           print(f"Warning: Contract col {col} to {lb, ub} skipped (col type is not GLP_DB):\n{self}")
-       else:
-           glpk.glp_set_col_bnds(self.lp, col + 1, glpk.GLP_DB, lb, ub)  # double-bounded variable
+        if col_type != glpk.GLP_DB:
+            print(
+                f"Warning: Contract col {col} to {lb, ub} skipped (col type is not GLP_DB):\n{self}"
+            )
+        else:
+            glpk.glp_set_col_bnds(
+                self.lp, col + 1, glpk.GLP_DB, lb, ub
+            )  # double-bounded variable
 
     def _get_col_bounds(self):
-        '''get column bounds
+        """get column bounds
 
         for external use use star's get_input_bounds which may be tighter
-        '''
+        """
 
         lp_cols = self.get_num_cols()
 
         # column lower and upper bounds
         col_bounds = []
-        
+
         for col in range(lp_cols):
             col_type = glpk.glp_get_col_type(self.lp, col + 1)
 
@@ -164,18 +170,20 @@ class LpInstance(Freezable):
             elif col_type == glpk.GLP_FX:
                 lb = ub = glpk.glp_get_col_lb(self.lp, col + 1)
             else:
-                assert col_type == glpk.GLP_FR, "unsupported col type in _get_col_bounds()"
+                assert (
+                    col_type == glpk.GLP_FR
+                ), "unsupported col type in _get_col_bounds()"
 
             col_bounds.append((lb, ub))
 
         return col_bounds
 
     def deserialize(self):
-        'deserialize self.lp from a tuple into a glpk_instance'
+        "deserialize self.lp from a tuple into a glpk_instance"
 
         assert isinstance(self.lp, tuple)
 
-        Timers.tic('deserialize')
+        Timers.tic("deserialize")
 
         data, glpk_indices, indptr, rhs, col_bounds = self.lp
 
@@ -183,7 +191,7 @@ class LpInstance(Freezable):
 
         # add cols
         names = self.names
-        self.names = [] # adding columns populates self.names
+        self.names = []  # adding columns populates self.names
 
         num_cols = len(col_bounds)
 
@@ -209,10 +217,10 @@ class LpInstance(Freezable):
         shape = (num_rows, num_cols)
         self.set_constraints_csr(data, glpk_indices, indptr, shape)
 
-        Timers.toc('deserialize')
+        Timers.toc("deserialize")
 
     def _column_names_str(self):
-        'get the line in __str__ for the column names'
+        "get the line in __str__ for the column names"
 
         rv = "    "
         dbl_max = sys.float_info.max
@@ -226,16 +234,16 @@ class LpInstance(Freezable):
             if lb != -dbl_max or ub != dbl_max:
                 name = "*" + name
 
-            name = name.rjust(6)[:6] # fix width to exactly 6
+            name = name.rjust(6)[:6]  # fix width to exactly 6
 
             rv += name + " "
 
         rv += "\n"
-        
+
         return rv
 
     def _opt_dir_str(self, zero_print):
-        'get the optimization direction line for __str__'
+        "get the optimization direction line for __str__"
 
         lp = self.lp
         cols = self.get_num_cols()
@@ -245,19 +253,19 @@ class LpInstance(Freezable):
             val = glpk.glp_get_obj_coef(lp, col)
 
             num = f"{val:.6f}"
-            num = num.rjust(6)[:6] # fix width to exactly 6
-            
+            num = num.rjust(6)[:6]  # fix width to exactly 6
+
             if val == 0:
                 rv += zero_print(num) + " "
             else:
                 rv += num + " "
 
         rv += "\n"
-        
+
         return rv
 
     def _col_stat_str(self):
-        'get the column statuses line for __str__'
+        "get the column statuses line for __str__"
 
         lp = self.lp
         cols = self.get_num_cols()
@@ -273,13 +281,13 @@ class LpInstance(Freezable):
         return rv
 
     def _constraints_str(self, zero_print):
-        'get the constraints matrix lines for __str__'
+        "get the constraints matrix lines for __str__"
 
         rv = ""
         lp = self.lp
         rows = self.get_num_rows()
         cols = self.get_num_cols()
-        
+
         stat_labels = ["?(0)?", "BS", "NL", "NU", "NF", "NS"]
         inds = SwigArray.get_int_array(cols + 1)
         vals = SwigArray.get_double_array(cols + 1)
@@ -294,13 +302,13 @@ class LpInstance(Freezable):
             for col in range(1, cols + 1):
                 val = 0
 
-                for index in range(1, num_inds+1):
+                for index in range(1, num_inds + 1):
                     if inds[index] == col:
                         val = vals[index]
                         break
 
                 num = f"{val:.6f}"
-                num = num.rjust(6)[:6] # fix width to exactly 6
+                num = num.rjust(6)[:6]  # fix width to exactly 6
 
                 rv += (zero_print(num) if val == 0 else num) + " "
 
@@ -311,7 +319,7 @@ class LpInstance(Freezable):
             rv += " <= "
 
             num = f"{val:.6f}"
-            num = num.rjust(6)[:6] # fix width to exactly 6
+            num = num.rjust(6)[:6]  # fix width to exactly 6
 
             rv += (zero_print(num) if val == 0 else num) + " "
 
@@ -320,7 +328,7 @@ class LpInstance(Freezable):
         return rv
 
     def _var_bounds_str(self):
-        'get the variable bounds string used in __str__'
+        "get the variable bounds string used in __str__"
 
         rv = ""
 
@@ -344,19 +352,22 @@ class LpInstance(Freezable):
         return rv
 
     def __str__(self, plain_text=False):
-        'get the LP as string (useful for debugging)'
+        "get the LP as string (useful for debugging)"
 
         if plain_text:
             zero_print = lambda x: x
         else:
-            def zero_print(s):
-                'print function for zeros'
 
-                return colored(s, 'white', attrs=['dark'])
+            def zero_print(s):
+                "print function for zeros"
+
+                return colored(s, "white", attrs=["dark"])
 
         rows = self.get_num_rows()
         cols = self.get_num_cols()
-        rv = "Lp has {} columns (variables) and {} rows (constraints)\n".format(cols, rows)
+        rv = "Lp has {} columns (variables) and {} rows (constraints)\n".format(
+            cols, rows
+        )
 
         rv += self._column_names_str()
 
@@ -367,35 +378,39 @@ class LpInstance(Freezable):
         rv += self._col_stat_str()
 
         rv += self._constraints_str(zero_print)
-        
+
         rv += self._var_bounds_str()
 
         return rv
 
     def get_num_rows(self):
-        'get the number of rows in the lp'
+        "get the number of rows in the lp"
 
         return glpk.glp_get_num_rows(self.lp)
 
     def get_num_cols(self):
-        'get the number of columns in the lp'
+        "get the number of columns in the lp"
 
         cols = glpk.glp_get_num_cols(self.lp)
 
-        assert cols == len(self.names), f"lp had {cols} columns, but names list had {len(self.names)} names"
+        assert cols == len(
+            self.names
+        ), f"lp had {cols} columns, but names list had {len(self.names)} names"
 
         return cols
 
     def add_rows_less_equal(self, rhs_vec):
-        '''add rows to the LP with <= constraints
+        """add rows to the LP with <= constraints
 
         rhs_vector is the right-hand-side values of the constriants
-        '''
+        """
 
         if isinstance(rhs_vec, list):
             rhs_vec = np.array(rhs_vec, dtype=float)
 
-        assert isinstance(rhs_vec, np.ndarray) and len(rhs_vec.shape) == 1, "expected 1-d right-hand-side vector"
+        assert (
+            isinstance(rhs_vec, np.ndarray) and len(rhs_vec.shape) == 1
+        ), "expected 1-d right-hand-side vector"
 
         if rhs_vec.shape[0] > 0:
             num_rows = glpk.glp_get_num_rows(self.lp)
@@ -404,10 +419,12 @@ class LpInstance(Freezable):
             glpk.glp_add_rows(self.lp, len(rhs_vec))
 
             for i, rhs in enumerate(rhs_vec):
-                glpk.glp_set_row_bnds(self.lp, num_rows + i + 1, glpk.GLP_UP, 0, rhs)  # '<=' constraint
+                glpk.glp_set_row_bnds(
+                    self.lp, num_rows + i + 1, glpk.GLP_UP, 0, rhs
+                )  # '<=' constraint
 
     def get_types(self):
-        '''get the constraint types. These are swiglpk.GLP_FX, swiglpk.GLP_UP, or swiglpk.GLP_LO'''
+        """get the constraint types. These are swiglpk.GLP_FX, swiglpk.GLP_UP, or swiglpk.GLP_LO"""
 
         lp_rows = glpk.glp_get_num_rows(self.lp)
         rv = []
@@ -418,7 +435,7 @@ class LpInstance(Freezable):
         return rv
 
     def add_positive_cols(self, names):
-        'add a certain number of columns to the LP with positive bounds'
+        "add a certain number of columns to the LP with positive bounds"
 
         assert isinstance(names, list)
         num_vars = len(names)
@@ -430,10 +447,12 @@ class LpInstance(Freezable):
             glpk.glp_add_cols(self.lp, num_vars)
 
             for i in range(num_vars):
-                glpk.glp_set_col_bnds(self.lp, num_cols + i + 1, glpk.GLP_LO, 0, 0)  # var with lower bounds (0, inf)
+                glpk.glp_set_col_bnds(
+                    self.lp, num_cols + i + 1, glpk.GLP_LO, 0, 0
+                )  # var with lower bounds (0, inf)
 
     def add_cols(self, names):
-        'add a certain number of columns to the LP'
+        "add a certain number of columns to the LP"
 
         assert isinstance(names, list)
         num_vars = len(names)
@@ -445,10 +464,12 @@ class LpInstance(Freezable):
             glpk.glp_add_cols(self.lp, num_vars)
 
             for i in range(num_vars):
-                glpk.glp_set_col_bnds(self.lp, num_cols + i + 1, glpk.GLP_FR, 0, 0)  # free variable (-inf, inf)
+                glpk.glp_set_col_bnds(
+                    self.lp, num_cols + i + 1, glpk.GLP_FR, 0, 0
+                )  # free variable (-inf, inf)
 
     def add_double_bounded_cols(self, names, lb, ub):
-        'add a certain number of columns to the LP with the given lower and upper bound'
+        "add a certain number of columns to the LP with the given lower and upper bound"
 
         lb = float(lb)
         ub = float(ub)
@@ -465,21 +486,27 @@ class LpInstance(Freezable):
 
             for i in range(num_vars):
                 if lb == ub:
-                    glpk.glp_set_col_bnds(self.lp, num_cols + i + 1, glpk.GLP_FX, lb, ub)  # fixed variable
+                    glpk.glp_set_col_bnds(
+                        self.lp, num_cols + i + 1, glpk.GLP_FX, lb, ub
+                    )  # fixed variable
                 else:
                     assert lb < ub
-                    glpk.glp_set_col_bnds(self.lp, num_cols + i + 1, glpk.GLP_DB, lb, ub)  # double-bounded variable
+                    glpk.glp_set_col_bnds(
+                        self.lp, num_cols + i + 1, glpk.GLP_DB, lb, ub
+                    )  # double-bounded variable
 
     def add_dense_row(self, vec, rhs, normalize=True):
-        '''
+        """
         add a row from a dense nd.array, row <= rhs
-        '''
+        """
 
-        Timers.tic('add_dense_row')
+        Timers.tic("add_dense_row")
 
         assert isinstance(vec, np.ndarray)
         assert len(vec.shape) == 1 or vec.shape[0] == 1
-        assert len(vec) == self.get_num_cols(), f"vec had {len(vec)} values, but lpi has {self.get_num_cols()} cols"
+        assert (
+            len(vec) == self.get_num_cols()
+        ), f"vec had {len(vec)} values, but lpi has {self.get_num_cols()} cols"
 
         if normalize:
             norm = np.linalg.norm(vec)
@@ -497,7 +524,7 @@ class LpInstance(Freezable):
 
         glpk.glp_set_mat_row(self.lp, rows_before + 1, vec.size, indices_vec, data_vec)
 
-        Timers.toc('add_dense_row')
+        Timers.toc("add_dense_row")
 
     def compute_residual(self, alpha_row, bounds, minmax=0):
         min_factors = np.where(alpha_row <= 0, bounds[:, 1 - minmax], bounds[:, minmax])
@@ -505,13 +532,13 @@ class LpInstance(Freezable):
         return alpha_min
 
     def set_constraints_csr(self, data, glpk_indices, indptr, shape):
-        '''
+        """
         set the constrains row by row to be equal to the passed-in csr matrix attribues
 
         glpk_indices is already offset by one
-        '''
+        """
 
-        Timers.tic('set_constraints_csr')
+        Timers.tic("set_constraints_csr")
         assert shape[0] <= self.get_num_rows()
         assert shape[1] <= self.get_num_cols()
 
@@ -522,23 +549,27 @@ class LpInstance(Freezable):
             # we must copy the indices since glpk is offset by 1 :(
             count = int(indptr[row + 1] - indptr[row])
 
-            #indices_list = glpk_indices[indptr[row]:indptr[row+1]]
-            #indices_vec = SwigArray.as_int_array(indices_list)
-            indices_vec = SwigArray.as_int_array(glpk_indices[indptr[row]:indptr[row+1]], count)
+            # indices_list = glpk_indices[indptr[row]:indptr[row+1]]
+            # indices_vec = SwigArray.as_int_array(indices_list)
+            indices_vec = SwigArray.as_int_array(
+                glpk_indices[indptr[row] : indptr[row + 1]], count
+            )
 
-            #data_row_list = [float(d) for d in data[indptr[row]:indptr[row+1]]]
-            #data_vec = SwigArray.as_double_array(data_row_list)
-            data_vec = SwigArray.as_double_array(data[indptr[row]:indptr[row+1]], count)
+            # data_row_list = [float(d) for d in data[indptr[row]:indptr[row+1]]]
+            # data_vec = SwigArray.as_double_array(data_row_list)
+            data_vec = SwigArray.as_double_array(
+                data[indptr[row] : indptr[row + 1]], count
+            )
 
             glpk.glp_set_mat_row(self.lp, 1 + row, count, indices_vec, data_vec)
 
-        Timers.toc('set_constraints_csr')
+        Timers.toc("set_constraints_csr")
 
     def get_rhs(self, row_indices=None):
-        '''get the rhs vector of the constraints
+        """get the rhs vector of the constraints
         row_indices - a list of requested indices (None=all)
         this returns an np.array of rhs values for the requested indices
-        '''
+        """
 
         rv = []
 
@@ -549,24 +580,29 @@ class LpInstance(Freezable):
         for row in row_indices:
             row_type = glpk.glp_get_row_type(self.lp, row + 1)
 
-            assert row_type == glpk.GLP_UP, "Error: Unsupported type ({}) in getRhs() in row {}".format(row_type, row)
-            
+            assert (
+                row_type == glpk.GLP_UP
+            ), "Error: Unsupported type ({}) in getRhs() in row {}".format(
+                row_type, row
+            )
+
             limit = glpk.glp_get_row_ub(self.lp, row + 1)
             rv.append(limit)
 
         return np.array(rv, dtype=float)
 
     def set_rhs(self, rhs_vec):
-        'set (overwrite) the rhs for exising rows'
+        "set (overwrite) the rhs for exising rows"
 
         assert rhs_vec.size == self.get_num_rows()
 
         for i, rhs in enumerate(rhs_vec):
-            glpk.glp_set_row_bnds(self.lp, i + 1, glpk.GLP_UP, 0, rhs)  # '<=' constraint
+            glpk.glp_set_row_bnds(
+                self.lp, i + 1, glpk.GLP_UP, 0, rhs
+            )  # '<=' constraint
 
     def get_constraints_csr(self):
-        '''get the LP matrix as a csr_matrix
-        '''
+        """get the LP matrix as a csr_matrix"""
 
         lp_rows = self.get_num_rows()
         lp_cols = self.get_num_cols()
@@ -574,7 +610,7 @@ class LpInstance(Freezable):
 
         data = np.zeros((nnz,), dtype=float)
         inds = np.zeros((nnz,), dtype=np.int32)
-        indptr = np.zeros((lp_rows+1,), dtype=np.int32)
+        indptr = np.zeros((lp_rows + 1,), dtype=np.int32)
 
         inds_row = SwigArray.get_int_array(lp_cols + 1)
         vals_row = SwigArray.get_double_array(lp_cols + 1)
@@ -591,23 +627,25 @@ class LpInstance(Freezable):
 
             indptr[row] = data_index
 
-        csr_mat = csr_matrix((data, inds, indptr), shape=(lp_rows, lp_cols), dtype=float)
+        csr_mat = csr_matrix(
+            (data, inds, indptr), shape=(lp_rows, lp_cols), dtype=float
+        )
         csr_mat.check_format()
 
         return csr_mat
-        
+
     def is_feasible(self):
-        '''check if the lp is feasible
+        """check if the lp is feasible
 
         returns a feasible point or None
-        '''
+        """
 
         return self.minimize(None, fail_on_unsat=False, use_exact=False) is not None
 
     def contains_point(self, pt, tol=1e-9):
-        '''does this lpi contain the point?
+        """does this lpi contain the point?
         this is slow, will pull the constraints and check them
-        '''
+        """
 
         print("Warning: called lpi.contains_point() (slow, used for testing)")
 
@@ -629,36 +667,40 @@ class LpInstance(Freezable):
         return rv
 
     def set_minimize_direction(self, direction):
-        '''set the optimization direction'''
+        """set the optimization direction"""
 
-        assert len(direction) == self.get_num_cols(), f"expected {self.get_num_cols()} cols, but optimization " + \
-            f"vector had {len(direction)} variables"
-        
+        assert len(direction) == self.get_num_cols(), (
+            f"expected {self.get_num_cols()} cols, but optimization "
+            + f"vector had {len(direction)} variables"
+        )
+
         for i, d in enumerate(direction):
             col = int(1 + i)
 
             glpk.glp_set_obj_coef(self.lp, col, float(d))
 
-    def reset_basis(self, basis_type='std'):
-        'reset initial lp basis'
+    def reset_basis(self, basis_type="std"):
+        "reset initial lp basis"
 
-        if basis_type == 'std':
+        if basis_type == "std":
             glpk.glp_std_basis(self.lp)
-        elif basis_type == 'adv':
+        elif basis_type == "adv":
             glpk.glp_adv_basis(self.lp, 0)
         else:
-            assert basis_type == 'cpx'
+            assert basis_type == "cpx"
             glpk.glp_cpx_basis(self.lp)
 
     def minimize(self, direction_vec, fail_on_unsat=True, use_exact=False):
-        '''minimize the lp, returning a list of assigments to each of the variables
+        """minimize the lp, returning a list of assigments to each of the variables
 
         if direction_vec is not None, this will first assign the optimization direction
 
         returns None if UNSAT, otherwise the optimization result.
-        '''
+        """
 
-        assert not isinstance(self.lp, tuple), "self.lp was tuple. Did you call lpi.deserialize()?"
+        assert not isinstance(
+            self.lp, tuple
+        ), "self.lp was tuple. Did you call lpi.deserialize()?"
 
         if direction_vec is None:
             direction_vec = [0] * self.get_num_cols()
@@ -667,20 +709,22 @@ class LpInstance(Freezable):
 
         if Settings.GLPK_RESET_BEFORE_MINIMIZE:
             self.reset_basis()
-        
+
         start = time.perf_counter()
         if use_exact:
             simplex_res = glpk.glp_exact(self.lp, get_lp_params())
         else:
             simplex_res = glpk.glp_simplex(self.lp, get_lp_params())
 
-        if simplex_res != 0: # solver failure (possibly timeout)
+        if simplex_res != 0:  # solver failure (possibly timeout)
             r = self.get_num_rows()
             c = self.get_num_cols()
 
             diff = time.perf_counter() - start
-            print(f"GLPK timed out / failed ({simplex_res}) after {round(diff, 3)} sec with primary " + \
-                  f"settings with {r} rows and {c} cols")
+            print(
+                f"GLPK timed out / failed ({simplex_res}) after {round(diff, 3)} sec with primary "
+                + f"settings with {r} rows and {c} cols"
+            )
 
             print("Retrying with reset")
             self.reset_basis()
@@ -694,7 +738,7 @@ class LpInstance(Freezable):
 
         if simplex_res != 0:
             print("Retrying with reset + alternate GLPK settings")
-                    
+
             # retry with alternate params
             params = get_lp_params(alternate_lp_params=True)
             self.reset_basis()
@@ -704,15 +748,19 @@ class LpInstance(Freezable):
             else:
                 simplex_res = glpk.glp_simplex(self.lp, params)
             diff = time.perf_counter() - start
-            print(f"result with reset & alternate settings ({simplex_res}) {round(diff, 3)} sec")
-            
+            print(
+                f"result with reset & alternate settings ({simplex_res}) {round(diff, 3)} sec"
+            )
+
         rv = self._process_simplex_result(simplex_res)
 
         if rv is None and fail_on_unsat:
             # extra logic to try harder if fail_on_unsafe is True
             # glpk can sometimes be cajoled into providing a solution
-            
-            print("Note: minimize failed with fail_on_unsat was true, trying to reset basis...")
+
+            print(
+                "Note: minimize failed with fail_on_unsat was true, trying to reset basis..."
+            )
 
             self.reset_basis()
             rv = self.minimize(direction_vec, fail_on_unsat=False, use_exact=True)
@@ -720,16 +768,16 @@ class LpInstance(Freezable):
             if rv is None:
                 print("still unsat after reset basis, trying no-dir optimization")
                 self.reset_basis()
-            
+
                 result_nodir = self.minimize(None, fail_on_unsat=False, use_exact=True)
 
                 # lp became infeasible when I picked an optimization direction
                 if result_nodir is not None:
-                    print("Using result from no-direction optimization") 
+                    print("Using result from no-direction optimization")
                     rv = result_nodir
                 else:
                     print("Error: No-dir result was also infeasible!")
-                    
+
                     if self.get_num_rows() < 50 and self.get_num_cols() < 50:
                         print(f"{self}")
             else:
@@ -742,51 +790,51 @@ class LpInstance(Freezable):
 
     @staticmethod
     def get_simplex_error_string(simplex_res):
-        '''get the error message when simplex() fails'''
+        """get the error message when simplex() fails"""
 
-        codes = [glpk.GLP_EBADB, glpk.GLP_ESING, glpk.GLP_ECOND, glpk.GLP_EBOUND, glpk.GLP_EFAIL, glpk.GLP_EOBJLL,
-                 glpk.GLP_EOBJUL, glpk.GLP_EITLIM, glpk.GLP_ETMLIM, glpk.GLP_ENOPFS, glpk.GLP_ENODFS]
+        codes = [
+            glpk.GLP_EBADB,
+            glpk.GLP_ESING,
+            glpk.GLP_ECOND,
+            glpk.GLP_EBOUND,
+            glpk.GLP_EFAIL,
+            glpk.GLP_EOBJLL,
+            glpk.GLP_EOBJUL,
+            glpk.GLP_EITLIM,
+            glpk.GLP_ETMLIM,
+            glpk.GLP_ENOPFS,
+            glpk.GLP_ENODFS,
+        ]
 
-        msgs = [ \
-            "Unable to start the search, because the initial basis specified " + \
-            "in the problem object is invalid-the number of basic (auxiliary " + \
-            "and structural) variables is not the same as the number of rows " + \
-            "in the problem object.", 
-
-            "Unable to start the search, because the basis matrix corresponding " + \
-            "to the initial basis is singular within the working " + \
-            "precision.",
-
-            "Unable to start the search, because the basis matrix corresponding " + \
-            "to the initial basis is ill-conditioned, i.e. its " + \
-            "condition number is too large.",
-
-            "Unable to start the search, because some double-bounded " + \
-            "(auxiliary or structural) variables have incorrect bounds.",
-
-            "The search was prematurely terminated due to the solver " + \
-            "failure.",
-
-            "The search was prematurely terminated, because the objective " + \
-            "function being maximized has reached its lower " + \
-            "limit and continues decreasing (the dual simplex only).",
-
-            "The search was prematurely terminated, because the objective " + \
-            "function being minimized has reached its upper " + \
-            "limit and continues increasing (the dual simplex only).",
-
-            "The search was prematurely terminated, because the simplex " + \
-            "iteration limit has been exceeded.",
-
-            "The search was prematurely terminated, because the time " + \
-            "limit has been exceeded.",
-
-            "The LP problem instance has no primal feasible solution " + \
-            "(only if the LP presolver is used).",
-
-            "The LP problem instance has no dual feasible solution " + \
-            "(only if the LP presolver is used).",
-            ]
+        msgs = [
+            "Unable to start the search, because the initial basis specified "
+            + "in the problem object is invalid-the number of basic (auxiliary "
+            + "and structural) variables is not the same as the number of rows "
+            + "in the problem object.",
+            "Unable to start the search, because the basis matrix corresponding "
+            + "to the initial basis is singular within the working "
+            + "precision.",
+            "Unable to start the search, because the basis matrix corresponding "
+            + "to the initial basis is ill-conditioned, i.e. its "
+            + "condition number is too large.",
+            "Unable to start the search, because some double-bounded "
+            + "(auxiliary or structural) variables have incorrect bounds.",
+            "The search was prematurely terminated due to the solver " + "failure.",
+            "The search was prematurely terminated, because the objective "
+            + "function being maximized has reached its lower "
+            + "limit and continues decreasing (the dual simplex only).",
+            "The search was prematurely terminated, because the objective "
+            + "function being minimized has reached its upper "
+            + "limit and continues increasing (the dual simplex only).",
+            "The search was prematurely terminated, because the simplex "
+            + "iteration limit has been exceeded.",
+            "The search was prematurely terminated, because the time "
+            + "limit has been exceeded.",
+            "The LP problem instance has no primal feasible solution "
+            + "(only if the LP presolver is used).",
+            "The LP problem instance has no dual feasible solution "
+            + "(only if the LP presolver is used).",
+        ]
 
         rv = "Unknown Error"
 
@@ -798,41 +846,53 @@ class LpInstance(Freezable):
         return rv
 
     def _process_simplex_result(self, simplex_res):
-        '''process the result of a glp_simplex call
+        """process the result of a glp_simplex call
 
         returns None on UNSAT, otherwise the optimization result with the requested columns
         if columns is None, will return full result
-        '''
+        """
 
         rv = None
 
         if simplex_res != glpk.GLP_ENOPFS:  # skip if no primal feasible w/ presolver
-            
-            if simplex_res != 0: # simplex failed, report the error
-                raise RuntimeError("glp_simplex returned nonzero status ({}): {}".format(
-                    simplex_res, LpInstance.get_simplex_error_string(simplex_res)))
-            
+
+            if simplex_res != 0:  # simplex failed, report the error
+                raise RuntimeError(
+                    "glp_simplex returned nonzero status ({}): {}".format(
+                        simplex_res, LpInstance.get_simplex_error_string(simplex_res)
+                    )
+                )
+
             status = glpk.glp_get_status(self.lp)
 
-            if status == glpk.GLP_NOFEAS: # infeasible
+            if status == glpk.GLP_NOFEAS:  # infeasible
                 rv = None
-            elif status == glpk.GLP_OPT: # optimal
+            elif status == glpk.GLP_OPT:  # optimal
                 lp_cols = self.get_num_cols()
                 rv = np.zeros(lp_cols)
 
                 for col in range(lp_cols):
                     rv[col] = glpk.glp_get_col_prim(self.lp, int(1 + col))
 
-            else: # neither infeasible nor optimal (for example, unbounded)
+            else:  # neither infeasible nor optimal (for example, unbounded)
                 error_msg = "<Unknown Status>"
-                
-                codes = [glpk.GLP_OPT, glpk.GLP_FEAS, glpk.GLP_INFEAS, glpk.GLP_NOFEAS, glpk.GLP_UNBND, glpk.GLP_UNDEF]
-                msgs = ["solution is optimal",
-                        "solution is feasible",
-                        "solution is infeasible",
-                        "problem has no feasible solution",
-                        "problem has unbounded solution",
-                        "solution is undefined"]
+
+                codes = [
+                    glpk.GLP_OPT,
+                    glpk.GLP_FEAS,
+                    glpk.GLP_INFEAS,
+                    glpk.GLP_NOFEAS,
+                    glpk.GLP_UNBND,
+                    glpk.GLP_UNDEF,
+                ]
+                msgs = [
+                    "solution is optimal",
+                    "solution is feasible",
+                    "solution is infeasible",
+                    "problem has no feasible solution",
+                    "problem has unbounded solution",
+                    "solution is undefined",
+                ]
 
                 for code, message in zip(codes, msgs):
                     if status == code:
@@ -843,19 +903,23 @@ class LpInstance(Freezable):
                     ray = glpk.glp_get_unbnd_ray(self.lp)
                     error_msg += f"; unbounded ray was variable #{ray}"
 
-                raise RuntimeError(f"LP status after minimize() was {status}: {error_msg}")
+                raise RuntimeError(
+                    f"LP status after minimize() was {status}: {error_msg}"
+                )
 
         return rv
 
-class UnsatError(RuntimeError):
-    'raised if an LP is infeasible'
 
-class SwigArray():
-    '''
+class UnsatError(RuntimeError):
+    "raised if an LP is infeasible"
+
+
+class SwigArray:
+    """
     This is my workaround to fix a memory leak in swig arrays, see: https://github.com/biosustain/swiglpk/issues/31)
 
     The general idea is to only allocate a single time for each type, and reuse the array
-    '''
+    """
 
     dbl_array = []
     dbl_array_size = -1
@@ -868,61 +932,67 @@ class SwigArray():
 
     @classmethod
     def get_double_array(cls, size):
-        'get a double array of the requested size (or greater)'
+        "get a double array of the requested size (or greater)"
 
         if size > cls.dbl_array_size:
-            cls.dbl_array_size = 2**math.ceil(math.log(size, 2)) # allocate in multiples of two
+            cls.dbl_array_size = 2 ** math.ceil(
+                math.log(size, 2)
+            )  # allocate in multiples of two
             cls.dbl_array = glpk.doubleArray(cls.dbl_array_size)
 
-            #print(f"allocated dbl array of size {cls.dbl_array_size} (requested {size})")
+            # print(f"allocated dbl array of size {cls.dbl_array_size} (requested {size})")
 
         return cls.dbl_array
 
     @classmethod
     def get_int_array(cls, size):
-        'get a int array of the requested size (or greater)'
+        "get a int array of the requested size (or greater)"
 
         if size > cls.int_array_size:
-            cls.int_array_size = 2**math.ceil(math.log(size, 2)) # allocate in multiples of two
+            cls.int_array_size = 2 ** math.ceil(
+                math.log(size, 2)
+            )  # allocate in multiples of two
             cls.int_array = glpk.intArray(cls.int_array_size)
 
-            #print(f"allocated int array of size {cls.int_array_size} (requested {size})")
+            # print(f"allocated int array of size {cls.int_array_size} (requested {size})")
 
         return cls.int_array
 
     @classmethod
     def as_double_array(cls, list_data, size):
-        'wrapper for swig as_doubleArray'
+        "wrapper for swig as_doubleArray"
 
         # about 3x slower than glpk.as_doubleArray, but doesn't leak memory
         arr = cls.get_double_array(size + 1)
 
         for i, val in enumerate(list_data):
-            arr[i+1] = float(val)
-            
+            arr[i + 1] = float(val)
+
         return arr
 
     @classmethod
     def as_int_array(cls, list_data, size):
-        'wrapper for swig as_intArray'
+        "wrapper for swig as_intArray"
 
         # about 3x slower than glpk.as_intArray, but doesn't leak memory
         arr = cls.get_int_array(size + 1)
 
         for i, val in enumerate(list_data):
-            arr[i+1] = val
+            arr[i + 1] = val
 
         return arr
 
     @classmethod
     def get_sequential_int_array(cls, size):
-        'creates or returns a swig int array that counts from 1, 2, 3, 4, .. size'
+        "creates or returns a swig int array that counts from 1, 2, 3, 4, .. size"
 
         if size > (cls.seq_array_size - 1):
-            cls.seq_array_size = 1 + 2**math.ceil(math.log(size, 2)) # allocate in multiples of two
+            cls.seq_array_size = 1 + 2 ** math.ceil(
+                math.log(size, 2)
+            )  # allocate in multiples of two
             cls.seq_array = glpk.intArray(cls.seq_array_size)
 
-            #print(f"allocated seq array of size {cls.seq_array_size} (requested {size})")
+            # print(f"allocated seq array of size {cls.seq_array_size} (requested {size})")
 
             for i in range(cls.seq_array_size):
                 cls.seq_array[i] = i

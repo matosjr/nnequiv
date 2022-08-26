@@ -1,10 +1,10 @@
-'''
+"""
 Stanley Bak
 
 Enmeration functions for Neural Network Analysis
 
 the method you probably want to use is enumerate_network()
-'''
+"""
 
 import multiprocessing
 import time
@@ -27,20 +27,24 @@ from nnenum.agen import try_quick_adversarial
 
 from nnenum.prefilter import LpCanceledException
 
+
 def make_init_ss(init, network, spec, start_time):
-    'make the initial star state'
+    "make the initial star state"
 
     network_inputs = network.get_num_inputs()
     network_outputs = network.get_num_outputs()
 
     if spec is not None:
-        assert network_outputs == spec.get_num_expected_variables(), \
-            f"spec expected {spec.get_num_expected_variables()} outputs; network had {network_outputs} outputs"
+        assert (
+            network_outputs == spec.get_num_expected_variables()
+        ), f"spec expected {spec.get_num_expected_variables()} outputs; network had {network_outputs} outputs"
 
     if isinstance(init, (list, tuple, np.ndarray)):
         init_box = init
 
-        assert len(init_box) == network_inputs, f"expected {network_inputs} dim init box, got {len(init_box)}"
+        assert (
+            len(init_box) == network_inputs
+        ), f"expected {network_inputs} dim init box, got {len(init_box)}"
 
         ss = LpStarState(init_box, spec=spec)
     elif isinstance(init, LpStar):
@@ -50,18 +54,20 @@ def make_init_ss(init, network, spec, start_time):
         assert isinstance(init, LpStarState), f"unsupported init type: {type(init)}"
         ss = init
 
-    assert len(ss.star.init_bias) == network_inputs, f"init_bias len: {len(ss.star.init_bias)}" + \
-        f", network inputs: {network_inputs}"
+    assert len(ss.star.init_bias) == network_inputs, (
+        f"init_bias len: {len(ss.star.init_bias)}"
+        + f", network inputs: {network_inputs}"
+    )
 
     ss.should_try_overapprox = False
 
     # propagate the initial star up to the first split
     timer_name = Timers.stack[-1].name if Timers.stack else None
 
-    try: # catch lp timeout
-        Timers.tic('propagate_up_to_split')
+    try:  # catch lp timeout
+        Timers.tic("propagate_up_to_split")
         ss.propagate_up_to_split(network, start_time)
-        Timers.toc('propagate_up_to_split')
+        Timers.toc("propagate_up_to_split")
     except LpCanceledException:
         while Timers.stack and Timers.stack[-1].name != timer_name:
             Timers.toc(Timers.stack[-1].name)
@@ -70,8 +76,9 @@ def make_init_ss(init, network, spec, start_time):
 
     return ss
 
+
 def enumerate_network(init, network, spec=None):
-    '''enumerate the branches in the network
+    """enumerate the branches in the network
 
     init can either be a 2-d list or an lp_star or an lp_star_state
 
@@ -79,10 +86,12 @@ def enumerate_network(init, network, spec=None):
     if spec is not None, a verification problem will be considered for the provided Specification object
 
     the output is an instance of Result
-    '''
+    """
 
     assert Settings.TIMEOUT is not None, "use Settings.TIMEOUT = np.inf for no timeout"
-    assert Settings.OVERAPPROX_LP_TIMEOUT is not None, "use Settings.OVERAPPROX_LP_TIMEOUT = np.inf for no timeout"
+    assert (
+        Settings.OVERAPPROX_LP_TIMEOUT is not None
+    ), "use Settings.OVERAPPROX_LP_TIMEOUT = np.inf for no timeout"
 
     if Settings.CHECK_SINGLE_THREAD_BLAS:
         check_openblas_threads()
@@ -91,8 +100,8 @@ def enumerate_network(init, network, spec=None):
 
     if not Settings.TIMING_STATS:
         Timers.disable()
-    
-    Timers.tic('enumerate_network')
+
+    Timers.tic("enumerate_network")
     start = time.perf_counter()
 
     if Settings.BRANCH_MODE != Settings.BRANCH_EXACT:
@@ -101,8 +110,9 @@ def enumerate_network(init, network, spec=None):
     if not Settings.EAGER_BOUNDS:
         assert Settings.SPLIT_ORDER == Settings.SPLIT_INORDER
 
-    assert not Settings.RESULT_SAVE_TIMERS or Settings.TIMING_STATS, \
-        "RESULT_SAVE_TIMERS cannot be used if TIMING_STATS is False"
+    assert (
+        not Settings.RESULT_SAVE_TIMERS or Settings.TIMING_STATS
+    ), "RESULT_SAVE_TIMERS cannot be used if TIMING_STATS is False"
 
     # adversarial generation process and queue
     concrete_io_tuple = None
@@ -112,48 +122,52 @@ def enumerate_network(init, network, spec=None):
 
     if Settings.ADVERSARIAL_ONNX_PATH is not None and Settings.ADVERSARIAL_TRY_QUICK:
         q = multiprocessing.Queue()
-        found_adv = multiprocessing.Value('i', 0)
-        
-        p = multiprocessing.Process(target=gen_adv, args=(q, found_adv, network, Settings.TIMEOUT))
+        found_adv = multiprocessing.Value("i", 0)
+
+        p = multiprocessing.Process(
+            target=gen_adv, args=(q, found_adv, network, Settings.TIMEOUT)
+        )
         p.start()
         # don't wait for result... run safety check in parallel
 
     init_ss = None
-    
+
     if concrete_io_tuple is None and time.perf_counter() - start < Settings.TIMEOUT:
-        init_ss = make_init_ss(init, network, spec, start) # returns None if timeout
+        init_ss = make_init_ss(init, network, spec, start)  # returns None if timeout
 
         proven_safe = False
         try_quick = Settings.TRY_QUICK_OVERAPPROX or Settings.SINGLE_SET
 
         if init_ss is not None and try_quick and spec is not None:
-            proven_safe, concrete_io_tuple = try_quick_overapprox(init_ss, network, spec, start, found_adv)
+            proven_safe, concrete_io_tuple = try_quick_overapprox(
+                init_ss, network, spec, start, found_adv
+            )
 
     if concrete_io_tuple is not None:
         # non-parallel adversarial example was generated
         if Settings.PRINT_OUTPUT:
             print("Proven unsafe before enumerate")
-                
+
         rv = Result(network, quick=True)
-        rv.result_str = 'unsafe'
+        rv.result_str = "unsafe"
 
         rv.cinput = concrete_io_tuple[0]
         rv.coutput = concrete_io_tuple[1]
     elif init_ss is None or time.perf_counter() - start > Settings.TIMEOUT:
         if Settings.PRINT_OUTPUT:
             print(f"Timeout before enumerate, init_ss is None: {init_ss is None}")
-            
+
         rv = Result(network, quick=True)
-        rv.result_str = 'timeout'
+        rv.result_str = "timeout"
     elif proven_safe:
         if Settings.PRINT_OUTPUT:
             print("Proven safe before enumerate")
-            
+
         rv = Result(network, quick=True)
-        rv.result_str = 'safe'
+        rv.result_str = "safe"
     else:
         concrete_io_tuple = None
-        
+
         if p is not None and q is not None:
             concrete_io_tuple = q.get()
             p.join()
@@ -167,24 +181,26 @@ def enumerate_network(init, network, spec=None):
                 print("Initial quick adversarial search found unsafe image.")
 
             rv = Result(network, quick=True)
-            rv.result_str = 'unsafe'
-            
+            rv.result_str = "unsafe"
+
             rv.cinput = concrete_io_tuple[0]
             rv.coutput = concrete_io_tuple[1]
         elif Settings.SINGLE_SET:
             if Settings.PRINT_OUTPUT:
                 print("SINGLE_SET analysis inconclusive.")
-                
+
             rv = Result(network, quick=True)
-            rv.result_str = 'none'
+            rv.result_str = "none"
         else:
             num_workers = 1 if Settings.NUM_PROCESSES < 1 else Settings.NUM_PROCESSES
 
             shared = SharedState(network, spec, num_workers, start)
             shared.push_init(init_ss)
 
-            if shared.result.result_str != 'safe': # easy specs can be proven safe in push_init()
-                Timers.tic('run workers')
+            if (
+                shared.result.result_str != "safe"
+            ):  # easy specs can be proven safe in push_init()
+                Timers.tic("run workers")
 
                 if num_workers == 1:
                     if Settings.PRINT_OUTPUT:
@@ -198,15 +214,16 @@ def enumerate_network(init, network, spec=None):
                         print(f"Running in parallel with {num_workers} processes")
 
                     for index in range(Settings.NUM_PROCESSES):
-                        p = multiprocessing.Process(target=worker_func, args=(index, shared))
+                        p = multiprocessing.Process(
+                            target=worker_func, args=(index, shared)
+                        )
                         p.start()
                         processes.append(p)
 
                     for p in processes:
                         p.join()
 
-                Timers.toc('run workers')
-
+                Timers.toc("run workers")
 
             rv = shared.result
             rv.total_secs = time.perf_counter() - start
@@ -220,16 +237,17 @@ def enumerate_network(init, network, spec=None):
 
     if rv.total_secs is None:
         rv.total_secs = time.perf_counter() - start
-    
-    Timers.toc('enumerate_network')
 
-    if Settings.TIMING_STATS and Settings.PRINT_OUTPUT and rv.result_str != 'error':
+    Timers.toc("enumerate_network")
+
+    if Settings.TIMING_STATS and Settings.PRINT_OUTPUT and rv.result_str != "error":
         Timers.print_stats()
 
     return rv
 
+
 def process_result(shared):
-    'process a verification result'
+    "process a verification result"
 
     # save timing information
     if shared.had_exception.value:
@@ -253,9 +271,11 @@ def process_result(shared):
     shared.result.total_stars = shared.finished_stars.value
 
     # save progress to result
-    shared.result.progress_tuple = (shared.finished_stars.value,
-                                    shared.unfinished_stars.value,
-                                    shared.finished_work_frac.value)
+    shared.result.progress_tuple = (
+        shared.finished_stars.value,
+        shared.unfinished_stars.value,
+        shared.finished_work_frac.value,
+    )
 
     if Settings.PRINT_OUTPUT:
         if shared.had_exception.value == 1:
@@ -264,40 +284,52 @@ def process_result(shared):
             stars = shared.finished_stars.value
             approx = shared.finished_approx_stars.value
             print(f"\nTotal Stars: {stars} ({stars - approx} exact, {approx} approx)")
-            
-            suffix = "" if shared.result.total_secs < 60 else f" ({round(shared.result.total_secs, 2)} sec)"
+
+            suffix = (
+                ""
+                if shared.result.total_secs < 60
+                else f" ({round(shared.result.total_secs, 2)} sec)"
+            )
             print(f"Runtime: {to_time_str(shared.result.total_secs)}{suffix}")
             print(f"Completed work frac: {shared.finished_work_frac.value}")
             print(f"Num Stars Copied Between Processes: {shared.num_offloaded.value}")
             print(f"Num Lps During Enumeration: {shared.num_lps_enum.value}")
-            #count = shared.incorrect_overapprox_count.value
-            #t = round(shared.incorrect_overapprox_time.value, 3)
-            #print(f"Incorrect Overapproximation Time: {round(t/1000, 1)} sec (count: {count})")
+            # count = shared.incorrect_overapprox_count.value
+            # t = round(shared.incorrect_overapprox_time.value, 3)
+            # print(f"Incorrect Overapproximation Time: {round(t/1000, 1)} sec (count: {count})")
             print(f"Total Num Lps: {shared.num_lps.value}")
             print("")
 
             if shared.had_timeout.value == 1:
                 print(f"Timeout ({Settings.TIMEOUT}) reached during execution")
             elif shared.result.found_confirmed_counterexample.value:
-                print(f"Result: network is UNSAFE with confirmed counterexample in result.cinput and result.coutput")
+                print(
+                    f"Result: network is UNSAFE with confirmed counterexample in result.cinput and result.coutput"
+                )
                 if len(shared.result.cinput) <= 10:
                     print(f"Input: {list(shared.result.cinput)}")
 
                 if len(shared.result.coutput) <= 10:
                     print(f"Output: {list(shared.result.coutput)}")
             elif shared.result.found_counterexample.value:
-                print(f"Result: network seems UNSAFE, but not confirmed counterexamples (possible numerial " + \
-                      "precision issues)")
+                print(
+                    f"Result: network seems UNSAFE, but not confirmed counterexamples (possible numerial "
+                    + "precision issues)"
+                )
             elif shared.spec is not None:
-                print(f"Result: network is SAFE") # safe subject to numerical accuracy issues
+                print(
+                    f"Result: network is SAFE"
+                )  # safe subject to numerical accuracy issues
 
         if shared.result.polys:
             print(f"Result contains {len(shared.result.polys)} sets of polygons")
 
         enum_ended_early = shared.result.result_str not in ["none", "safe"]
-        
+
         if enum_ended_early and shared.result.polys:
-            print(f"Warning: result polygons / stars is incomplete, since the enumeration ended early")
+            print(
+                f"Warning: result polygons / stars is incomplete, since the enumeration ended early"
+            )
 
     # if unsafe, convert concrete inputs / outputs to regular lists
     shared.result.cinput = list(shared.result.cinput)
@@ -305,25 +337,28 @@ def process_result(shared):
 
     # deserialize stars if saved
     if shared.result.stars:
-        shared.result.stars = list(shared.result.stars) # convert to normal list
+        shared.result.stars = list(shared.result.stars)  # convert to normal list
 
-        Timers.tic('deserialize result stars')
+        Timers.tic("deserialize result stars")
 
         for s in shared.result.stars:
             s.lpi.deserialize()
 
-        Timers.toc('deserialize result stars')
+        Timers.toc("deserialize result stars")
 
     # save timers if requested
-    for timer_name, count, secs in zip(Settings.RESULT_SAVE_TIMERS, shared.timer_counts, shared.timer_secs):
+    for timer_name, count, secs in zip(
+        Settings.RESULT_SAVE_TIMERS, shared.timer_counts, shared.timer_secs
+    ):
         shared.result.timers[timer_name] = (count, secs)
 
+
 class SharedState(Freezable):
-    'shared computation state across processes'
+    "shared computation state across processes"
 
     def __init__(self, network, spec, num_workers, start_time):
         assert isinstance(network, NeuralNetwork)
-        
+
         # process-local copies
         self.network = network
         self.spec = spec
@@ -336,48 +371,50 @@ class SharedState(Freezable):
         # this lock should be used whenever modifying shared variables or consistency is needed,
         # except for the more_work_queue since that manages its own locks
         self.mutex = multiprocessing.Lock()
-        
+
         if self.multithreaded:
             self.more_work_queue = multiprocessing.Queue()
         else:
-            self.more_work_queue = FakeQueue() # use deque for single-threaded, faster
+            self.more_work_queue = FakeQueue()  # use deque for single-threaded, faster
 
         # queue size is unreliable since multithreaded, use this instead
-        self.stars_in_progress = multiprocessing.Value('i', 0)
+        self.stars_in_progress = multiprocessing.Value("i", 0)
 
         # used for load balancing
-        self.heap_sizes = multiprocessing.Array('i', num_workers)
+        self.heap_sizes = multiprocessing.Array("i", num_workers)
 
         # statistics worker -> master
-        self.num_lps = multiprocessing.Value('i', 0)
-        self.num_lps_enum = multiprocessing.Value('i', 0)
-        self.num_offloaded = multiprocessing.Value('i', 0)
-        self.finished_stars = multiprocessing.Value('i', 0)
-        self.unfinished_stars = multiprocessing.Value('i', 0)
-        
-        self.finished_approx_stars = multiprocessing.Value('i', 0)
-        self.finished_work_frac = multiprocessing.Value('f', 0) 
-        self.incorrect_overapprox_count = multiprocessing.Value('i', 0)
-        self.incorrect_overapprox_time = multiprocessing.Value('f', 0)
+        self.num_lps = multiprocessing.Value("i", 0)
+        self.num_lps_enum = multiprocessing.Value("i", 0)
+        self.num_offloaded = multiprocessing.Value("i", 0)
+        self.finished_stars = multiprocessing.Value("i", 0)
+        self.unfinished_stars = multiprocessing.Value("i", 0)
+
+        self.finished_approx_stars = multiprocessing.Value("i", 0)
+        self.finished_work_frac = multiprocessing.Value("f", 0)
+        self.incorrect_overapprox_count = multiprocessing.Value("i", 0)
+        self.incorrect_overapprox_time = multiprocessing.Value("f", 0)
 
         num_timers = len(Settings.RESULT_SAVE_TIMERS)
-        self.timer_secs = multiprocessing.Array('f', num_timers) # seconds, in same order as timers in Settings
-        self.timer_counts = multiprocessing.Array('i', num_timers)
+        self.timer_secs = multiprocessing.Array(
+            "f", num_timers
+        )  # seconds, in same order as timers in Settings
+        self.timer_counts = multiprocessing.Array("i", num_timers)
 
-        self.cur_layers = multiprocessing.Array('i', num_workers)
-        self.cur_neurons = multiprocessing.Array('i', num_workers)
+        self.cur_layers = multiprocessing.Array("i", num_workers)
+        self.cur_neurons = multiprocessing.Array("i", num_workers)
 
         # status update if worker 0 finishes initial overapprox
-        self.finished_initial_overapprox = multiprocessing.Value('i', 0)
+        self.finished_initial_overapprox = multiprocessing.Value("i", 0)
 
         # set if an exception occurs so everyone exits
-        self.had_exception = multiprocessing.Value('i', 0)
+        self.had_exception = multiprocessing.Value("i", 0)
 
         # set if a timeout occured so everyone exits
-        self.had_timeout = multiprocessing.Value('i', 0)
+        self.had_timeout = multiprocessing.Value("i", 0)
 
         # general flag if we should exit
-        self.should_exit = multiprocessing.Value('i', 0)
+        self.should_exit = multiprocessing.Value("i", 0)
 
         # result data
         self.result = Result(network)
@@ -385,9 +422,9 @@ class SharedState(Freezable):
         self.freeze_attrs()
 
     def push_init(self, ss):
-        'put the initial init box or star onto the work queue'
+        "put the initial init box or star onto the work queue"
 
-        Timers.tic('push_init')
+        Timers.tic("push_init")
 
         # without the mutex here, if the threads start quickly, they may exit before finding the first piece of work
         # since the queue can be asynchronous
@@ -398,27 +435,27 @@ class SharedState(Freezable):
         self.mutex.release()
         ##############################
 
-        Timers.toc('push_init')
+        Timers.toc("push_init")
 
     def put_queue(self, ss):
-        'put a starstate on the queue'
+        "put a starstate on the queue"
 
-        Timers.tic('put_queue')
+        Timers.tic("put_queue")
 
         if self.multithreaded:
             ss.star.lpi.serialize()
 
         self.more_work_queue.put(ss)
 
-        Timers.toc('put_queue')    
+        Timers.toc("put_queue")
 
     def get_global_queue(self, block=True, timeout=None, skip_deserialize=False):
-        '''pop a starstate from the global queue
+        """pop a starstate from the global queue
 
         returns None on timeout
-        '''
+        """
 
-        Timers.tic('get_global_queue')
+        Timers.tic("get_global_queue")
 
         try:
             rv = self.more_work_queue.get(block=block, timeout=timeout)
@@ -429,28 +466,31 @@ class SharedState(Freezable):
         except queue.Empty:
             rv = None
 
-        Timers.toc('get_global_queue')
+        Timers.toc("get_global_queue")
 
         return rv
 
+
 class PrivateState(Freezable):
-    'private state for work processes'
+    "private state for work processes"
 
     def __init__(self, worker_index):
         self.worker_index = worker_index
 
         # ss is the current StarState being computed
-        self.ss = None # pylint: disable=invalid-name
-        #self.work_list = [] # list of tuples: (layer, neuron, id(ss), ss)
+        self.ss = None  # pylint: disable=invalid-name
+        # self.work_list = [] # list of tuples: (layer, neuron, id(ss), ss)
 
         self.work_list = []
 
-        self.branch_tuples_list = None # for saving of branch strs to file
+        self.branch_tuples_list = None  # for saving of branch strs to file
 
-        if self.worker_index == 0 and \
-              (Settings.SAVE_BRANCH_TUPLES_FILENAME is not None or Settings.PRINT_BRANCH_TUPLES):
+        if self.worker_index == 0 and (
+            Settings.SAVE_BRANCH_TUPLES_FILENAME is not None
+            or Settings.PRINT_BRANCH_TUPLES
+        ):
             self.branch_tuples_list = []
-        
+
         self.total_overapprox_ms = 0
         self.max_approx_gen = 0
 
@@ -465,7 +505,7 @@ class PrivateState(Freezable):
 
         self.stars_in_progress = 0
 
-        self.agen = None # adversarial example generator
+        self.agen = None  # adversarial example generator
 
         if Settings.SHUFFLE_TIME is not None:
             self.next_shuffle_step = Settings.SHUFFLE_TIME
@@ -473,7 +513,9 @@ class PrivateState(Freezable):
 
         # shared variable timing updates
         self.next_shared_var_update = time.time() + Settings.UPDATE_SHARED_VARS_INTERVAL
-        self.shared_update_urgent = False # used when work is popped to make sure we update heap sizes
+        self.shared_update_urgent = (
+            False  # used when work is popped to make sure we update heap sizes
+        )
 
         # fullfullment time stats
         self.fulfillment_requested_time = None
@@ -501,19 +543,22 @@ class PrivateState(Freezable):
 
         self.freeze_attrs()
 
-def worker_func(worker_index, shared):
-    'worker function during verification'
 
-    np.seterr(all='raise') # raise exceptions on floating-point errors instead of printing warnings
+def worker_func(worker_index, shared):
+    "worker function during verification"
+
+    np.seterr(
+        all="raise"
+    )  # raise exceptions on floating-point errors instead of printing warnings
 
     if shared.multithreaded:
         reinit_onnx_sessions(shared.network)
-        Timers.stack.clear() # reset inherited Timers
+        Timers.stack.clear()  # reset inherited Timers
         tag = f" (Process {worker_index})"
     else:
         tag = ""
 
-    timer_name = f'worker_func{tag}'
+    timer_name = f"worker_func{tag}"
 
     Timers.tic(timer_name)
 
@@ -521,15 +566,21 @@ def worker_func(worker_index, shared):
     priv.start_time = shared.start_time
     w = Worker(shared, priv)
 
-    if worker_index == 1 and Settings.ADVERSARIAL_IN_WORKERS and Settings.ADVERSARIAL_ONNX_PATH:
+    if (
+        worker_index == 1
+        and Settings.ADVERSARIAL_IN_WORKERS
+        and Settings.ADVERSARIAL_ONNX_PATH
+    ):
         # while worker 0 does overapproximation, worker 1
         priv.agen, aimage = try_quick_adversarial(1)
-            
+
         for i in range(Settings.ADVERSARIAL_WORKERS_MAX_ITER):
-            
+
             if aimage is not None:
                 if Settings.PRINT_OUTPUT:
-                    print(f"mixed_adversarial worker {worker_index} found unsafe image after on iteration {i}")
+                    print(
+                        f"mixed_adversarial worker {worker_index} found unsafe image after on iteration {i}"
+                    )
 
                 flat_image = nn_flatten(aimage)
 
@@ -540,7 +591,9 @@ def worker_func(worker_index, shared):
                 confirmed = olabel != Settings.ADVERSARIAL_ORIG_LABEL
 
                 if Settings.PRINT_OUTPUT:
-                    print(f"Original label: {Settings.ADVERSARIAL_ORIG_LABEL}, output argmax: {olabel}")
+                    print(
+                        f"Original label: {Settings.ADVERSARIAL_ORIG_LABEL}, output argmax: {olabel}"
+                    )
                     print(f"counterexample was confirmed: {confirmed}")
 
                 if confirmed:
@@ -551,8 +604,8 @@ def worker_func(worker_index, shared):
             if shared.should_exit.value != 0:
                 break
 
-            #if shared.finished_initial_overapprox.value == 1 and worker_index != 1:
-                # worker 1 finishes all attempts, other works help with enumeration
+            # if shared.finished_initial_overapprox.value == 1 and worker_index != 1:
+            # worker 1 finishes all attempts, other works help with enumeration
             #    break
 
             # try again using a mixed strategy
@@ -566,18 +619,26 @@ def worker_func(worker_index, shared):
             print("\n")
 
             if Settings.SAVE_BRANCH_TUPLES_FILENAME is not None:
-                with open(Settings.SAVE_BRANCH_TUPLES_FILENAME, 'w') as f:
+                with open(Settings.SAVE_BRANCH_TUPLES_FILENAME, "w") as f:
                     for line in w.priv.branch_tuples_list:
-                        f.write(f'{line}\n')
+                        f.write(f"{line}\n")
 
                     if not Settings.TIMING_STATS:
-                        f.write(f"\nNo timing stats recorded because Settings.TIMING_STATS was False")
+                        f.write(
+                            f"\nNo timing stats recorded because Settings.TIMING_STATS was False"
+                        )
                     else:
                         f.write("\nStats:\n")
 
-                        as_timer_list = Timers.top_level_timer.get_children_recursive('advance')
-                        fs_timer_list = Timers.top_level_timer.get_children_recursive('finished_star')
-                        to_timer_list = Timers.top_level_timer.get_children_recursive('do_overapprox_rounds')
+                        as_timer_list = Timers.top_level_timer.get_children_recursive(
+                            "advance"
+                        )
+                        fs_timer_list = Timers.top_level_timer.get_children_recursive(
+                            "finished_star"
+                        )
+                        to_timer_list = Timers.top_level_timer.get_children_recursive(
+                            "do_overapprox_rounds"
+                        )
 
                         if as_timer_list:
                             as_timer = as_timer_list[0]
@@ -596,17 +657,21 @@ def worker_func(worker_index, shared):
 
                         total_secs = exact_secs + o_secs
 
-                        f.write(f"Total time: {round(total_secs, 3)} ({round(o_secs, 3)} overapprox, " + \
-                                f"{round(exact_secs, 3)} exact)\n")
+                        f.write(
+                            f"Total time: {round(total_secs, 3)} ({round(o_secs, 3)} overapprox, "
+                            + f"{round(exact_secs, 3)} exact)\n"
+                        )
 
-                        t = round(w.priv.total_overapprox_ms/1000, 3)
-                        f.write(f"Sum total time for ONLY safe overapproxations (optimal): {t}\n")
+                        t = round(w.priv.total_overapprox_ms / 1000, 3)
+                        f.write(
+                            f"Sum total time for ONLY safe overapproxations (optimal): {t}\n"
+                        )
 
         Timers.toc(timer_name)
 
         if shared.multithreaded and not shared.had_exception.value:
             if worker_index != 0 and Settings.PRINT_OUTPUT and Settings.TIMING_STATS:
-                time.sleep(0.2) # delay to try to let worker 0 print timing stats first
+                time.sleep(0.2)  # delay to try to let worker 0 print timing stats first
 
             ##############################
             shared.mutex.acquire()
@@ -614,9 +679,13 @@ def worker_func(worker_index, shared):
 
             # computation time is sum of advance_star and finished_star
             if Settings.TIMING_STATS:
-                as_timer_list = Timers.top_level_timer.get_children_recursive('advance')
-                fs_timer_list = Timers.top_level_timer.get_children_recursive('finished_star')
-                to_timer_list = Timers.top_level_timer.get_children_recursive('do_overapprox_rounds')
+                as_timer_list = Timers.top_level_timer.get_children_recursive("advance")
+                fs_timer_list = Timers.top_level_timer.get_children_recursive(
+                    "finished_star"
+                )
+                to_timer_list = Timers.top_level_timer.get_children_recursive(
+                    "do_overapprox_rounds"
+                )
 
                 as_secs = as_timer_list[0].total_secs if as_timer_list else 0
                 fs_secs = fs_timer_list[0].total_secs if fs_timer_list else 0
@@ -636,15 +705,21 @@ def worker_func(worker_index, shared):
                     e_stars = w.priv.finished_stars
                     a_stars = w.priv.finished_approx_stars
                     tot_stars = e_stars + a_stars
-                    print(f"Worker {worker_index}: {tot_stars} stars ({e_stars} exact, {a_stars} approx); " + \
-                          f"Working: {round(sum_percent, 1)}% (Exact: {round(exact_percent, 1)}%, " + \
-                          f"Overapprox: {round(over_percent, 1)}%); " + \
-                          f"Waiting: {round(1000*t, 3)}ms ")
+                    print(
+                        f"Worker {worker_index}: {tot_stars} stars ({e_stars} exact, {a_stars} approx); "
+                        + f"Working: {round(sum_percent, 1)}% (Exact: {round(exact_percent, 1)}%, "
+                        + f"Overapprox: {round(over_percent, 1)}%); "
+                        + f"Waiting: {round(1000*t, 3)}ms "
+                    )
             shared.mutex.release()
             ##############################
 
-            if Settings.PRINT_OUTPUT and Settings.TIMING_STATS and \
-               Settings.NUM_PROCESSES > 1 and worker_index == 0:
+            if (
+                Settings.PRINT_OUTPUT
+                and Settings.TIMING_STATS
+                and Settings.NUM_PROCESSES > 1
+                and worker_index == 0
+            ):
                 time.sleep(0.4)
                 print("")
                 Timers.print_stats()
@@ -659,14 +734,14 @@ def worker_func(worker_index, shared):
         shared.should_exit.value = True
         shared.mutex.release()
 
-        print(f"\nWorker {worker_index} had exception") 
+        print(f"\nWorker {worker_index} had exception")
         w.clear_remaining_work()
 
         # dump branch tuples
         if Settings.SAVE_BRANCH_TUPLES_FILENAME is not None:
-            with open(Settings.SAVE_BRANCH_TUPLES_FILENAME, 'w') as f:
+            with open(Settings.SAVE_BRANCH_TUPLES_FILENAME, "w") as f:
                 for line in w.priv.branch_tuples_list:
-                    f.write(f'{line}\n')
+                    f.write(f"{line}\n")
 
         # fix timers
         while Timers.stack and Timers.stack[-1].name != timer_name:
@@ -674,13 +749,14 @@ def worker_func(worker_index, shared):
 
         Timers.toc(timer_name)
 
+
 def gen_adv(q, found_adv, network, remaining_secs):
-    '''try a quick adversarial
+    """try a quick adversarial
 
     puts concrete_io_tuple or None into the queue
 
     when it's found, the multiprocessing.value (found_adv) is set to 1
-    '''
+    """
 
     concrete_io_tuple = gen_adv_single_threaded(network, remaining_secs)
 
@@ -690,13 +766,16 @@ def gen_adv(q, found_adv, network, remaining_secs):
     q.put(concrete_io_tuple)
     q.close()
 
+
 def gen_adv_single_threaded(network, remaining_secs):
-    'gen adversarial without multiprocessing interface'
+    "gen adversarial without multiprocessing interface"
 
     concrete_io_tuple = None
-        
+
     start = time.perf_counter()
-    _, aimage = try_quick_adversarial(Settings.ADVERSARIAL_QUICK_NUM_ATTEMPTS, remaining_secs)
+    _, aimage = try_quick_adversarial(
+        Settings.ADVERSARIAL_QUICK_NUM_ATTEMPTS, remaining_secs
+    )
     gen_time = time.perf_counter() - start
 
     if aimage is not None:
@@ -713,11 +792,15 @@ def gen_adv_single_threaded(network, remaining_secs):
         exec_time = time.perf_counter() - start
 
         if Settings.PRINT_OUTPUT:
-            print(f"Original label: {Settings.ADVERSARIAL_ORIG_LABEL}, output argmax: {olabel}")
+            print(
+                f"Original label: {Settings.ADVERSARIAL_ORIG_LABEL}, output argmax: {olabel}"
+            )
 
             gen_ms = f"{round(1000*gen_time, 1)}ms"
             exec_ms = f"{round(1000*exec_time, 1)}ms"
-            print(f"counterexample was confirmed: {confirmed}. Gen: {gen_ms}, Exec: {exec_ms}")
+            print(
+                f"counterexample was confirmed: {confirmed}. Gen: {gen_ms}, Exec: {exec_ms}"
+            )
 
         if confirmed:
             concrete_io_tuple = (nn_flatten(aimage), flat_output)
