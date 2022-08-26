@@ -7,15 +7,15 @@ Note: the logic for a lack of prefilter... using lp at each step, is also encode
 """
 
 import time
+
 import numpy as np
 
+from nnenum.lputil import update_bounds_lp
+from nnenum.network import nn_flatten, nn_unflatten
 from nnenum.settings import Settings
+from nnenum.timerutil import Timers
 from nnenum.util import Freezable
 from nnenum.zonotope import Zonotope
-from nnenum.timerutil import Timers
-
-from nnenum.network import nn_flatten, nn_unflatten
-from nnenum.lputil import update_bounds_lp
 
 
 class LpCanceledException(Exception):

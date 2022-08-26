@@ -7,25 +7,24 @@ the method you probably want to use is enumerate_network()
 """
 
 import multiprocessing
-import time
 import queue
+import time
 import traceback
 
 import numpy as np
 
-from nnenum.timerutil import Timers
+from nnenum.agen import try_quick_adversarial
 from nnenum.lp_star import LpStar
 from nnenum.lp_star_state import LpStarState
-from nnenum.util import Freezable, FakeQueue, to_time_str, check_openblas_threads
-from nnenum.settings import Settings
-from nnenum.result import Result
 from nnenum.network import NeuralNetwork, nn_flatten
-from nnenum.worker import Worker
-from nnenum.overapprox import try_quick_overapprox
 from nnenum.onnx_network import reinit_onnx_sessions
-from nnenum.agen import try_quick_adversarial
-
+from nnenum.overapprox import try_quick_overapprox
 from nnenum.prefilter import LpCanceledException
+from nnenum.result import Result
+from nnenum.settings import Settings
+from nnenum.timerutil import Timers
+from nnenum.util import FakeQueue, Freezable, check_openblas_threads, to_time_str
+from nnenum.worker import Worker
 
 
 def make_init_ss(init, network, spec, start_time):

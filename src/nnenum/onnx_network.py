@@ -3,31 +3,29 @@ functions related to loading onnx networks
 """
 
 import time
+
 import numpy as np
-
-from scipy.sparse import csc_matrix, csr_matrix
-from scipy import sparse
-
 import onnx
 import onnxruntime as ort
-
+from onnx.helper import ValueInfoProto, make_graph, make_model
+from scipy import sparse
+from scipy.sparse import csc_matrix, csr_matrix
 from skl2onnx.helpers.onnx_helper import (
     enumerate_model_node_outputs,
     select_model_inputs_outputs,
 )
-from onnx.helper import ValueInfoProto, make_graph, make_model
 
 from nnenum.network import (
-    NeuralNetwork,
     AddLayer,
     FlattenLayer,
-    ReluLayer,
-    MatMulLayer,
     FullyConnectedLayer,
+    MatMulLayer,
+    NeuralNetwork,
+    ReluLayer,
+    nn_flatten,
+    nn_unflatten,
 )
-from nnenum.network import nn_unflatten, nn_flatten
 from nnenum.settings import Settings
-
 from nnenum.util import Freezable
 from nnenum.zonotope import Zonotope
 

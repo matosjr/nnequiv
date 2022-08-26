@@ -2,8 +2,9 @@ import numpy as np
 
 from nnenum.lpinstance import LpInstance, UnsatError
 from nnenum.timerutil import Timers
-from .property import EquivalenceProperty
+
 from ..zono_state import ZonoState
+from .property import EquivalenceProperty
 
 
 class Top1Equivalence(EquivalenceProperty):

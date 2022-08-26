@@ -4,19 +4,18 @@ May 2018
 GLPK python interface using swiglpk
 """
 
-import sys
 import math
+import sys
 import time
 
 import numpy as np
+import swiglpk as glpk
 from scipy.sparse import csr_matrix
-
 from termcolor import colored
 
-import swiglpk as glpk
-from nnenum.util import Freezable
-from nnenum.timerutil import Timers
 from nnenum.settings import Settings
+from nnenum.timerutil import Timers
+from nnenum.util import Freezable
 
 
 def get_lp_params(alternate_lp_params=False):

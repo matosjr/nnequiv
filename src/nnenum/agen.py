@@ -4,22 +4,20 @@ adversarial generation for nnenum
 Stanley Bak, 2020
 """
 
-import os
 import logging
+import os
 import time
 import warnings
 
-import numpy as np
-
-import onnx
-
-import tensorflow as tf
 import foolbox as fb
+import numpy as np
+import onnx
+import tensorflow as tf
 
-from nnenum.util import Freezable
-from nnenum.timerutil import Timers
 from nnenum.network import nn_unflatten
 from nnenum.settings import Settings
+from nnenum.timerutil import Timers
+from nnenum.util import Freezable
 
 
 class AgenState(Freezable):

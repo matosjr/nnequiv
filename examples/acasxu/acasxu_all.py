@@ -9,10 +9,10 @@ import sys
 import time
 from pathlib import Path
 
+from acasxu_single import verify_acasxu
 from termcolor import cprint
 
 from nnenum.settings import Settings
-from acasxu_single import verify_acasxu
 
 
 def main():

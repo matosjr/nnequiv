@@ -6,11 +6,11 @@ Stanley Bak
 
 import numpy as np
 
+from nnenum import kamenev
 from nnenum.lpinstance import LpInstance
-from nnenum.util import Freezable
 from nnenum.settings import Settings
 from nnenum.timerutil import Timers
-from nnenum import kamenev
+from nnenum.util import Freezable
 
 
 class LpStar(Freezable):

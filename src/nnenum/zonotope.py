@@ -6,10 +6,10 @@ Stanley Bak
 
 import numpy as np
 
-from nnenum.util import Freezable
-from nnenum.timerutil import Timers
 from nnenum import kamenev
 from nnenum.settings import Settings
+from nnenum.timerutil import Timers
+from nnenum.util import Freezable
 
 
 def zono_from_compressed_init_box(init_bm, init_bias, init_box):

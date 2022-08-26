@@ -3,9 +3,10 @@ import numpy as np
 from nnenum.lpinstance import UnsatError
 from nnenum.timerutil import Timers
 from nnenum.zonotope import Zonotope
-from .property import EquivalenceProperty
-from ..zono_state import ZonoState
 from nnequiv.global_state import GLOBAL_STATE
+
+from ..zono_state import ZonoState
+from .property import EquivalenceProperty
 
 
 class EpsilonEquivalence(EquivalenceProperty):

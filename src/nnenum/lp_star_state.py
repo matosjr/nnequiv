@@ -6,19 +6,18 @@ Stanley Bak
 import numpy as np
 
 from nnenum.lp_star import LpStar
+from nnenum.network import (
+    AddLayer,
+    FlattenLayer,
+    FullyConnectedLayer,
+    MatMulLayer,
+    ReluLayer,
+)
 from nnenum.prefilter import Prefilter
+from nnenum.settings import Settings
+from nnenum.specification import DisjunctiveSpec
 from nnenum.timerutil import Timers
 from nnenum.util import Freezable, compress_init_box
-from nnenum.network import (
-    FullyConnectedLayer,
-    ReluLayer,
-    FlattenLayer,
-    AddLayer,
-    MatMulLayer,
-)
-from nnenum.specification import DisjunctiveSpec
-
-from nnenum.settings import Settings
 
 
 class LpStarState(Freezable):

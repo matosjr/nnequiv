@@ -1,18 +1,17 @@
+import logging
 import sys
 
 import numpy as np
-import logging
+from properties import PROPERTY
 
 from nnenum.lp_star import LpStar
 from nnenum.onnx_network import load_onnx_network
 from nnenum.settings import Settings
+from nnenum.timerutil import Timers
 from nnenum.zonotope import Zonotope
 from nnequiv.equivalence import check_equivalence
 from nnequiv.equivalence_properties import EpsilonEquivalence
-from nnenum.timerutil import Timers
 from nnequiv.equivalence_properties.top1 import Top1Equivalence
-
-from properties import PROPERTY
 
 logging.basicConfig(level=logging.INFO)
 

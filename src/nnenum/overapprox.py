@@ -3,14 +3,15 @@ Overapproximation analysis
 """
 
 import time
+
 import numpy as np
 
+from nnenum.network import FullyConnectedLayer, ReluLayer, nn_flatten, nn_unflatten
+from nnenum.prefilter import sort_splits, update_bounds_lp
 from nnenum.settings import Settings
+from nnenum.specification import DisjunctiveSpec
 from nnenum.timerutil import Timers
 from nnenum.util import Freezable
-from nnenum.prefilter import update_bounds_lp, sort_splits
-from nnenum.specification import DisjunctiveSpec
-from nnenum.network import ReluLayer, FullyConnectedLayer, nn_flatten, nn_unflatten
 
 
 def try_quick_overapprox(ss, network, spec, start_time, found_adv):

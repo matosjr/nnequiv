@@ -4,8 +4,8 @@ Utilities
 Stanley Bak, 2018
 """
 
-from collections import deque
 import queue
+from collections import deque
 
 import numpy as np
 from threadpoolctl import threadpool_info

@@ -7,8 +7,8 @@ import time
 
 import numpy as np
 
-from nnenum.util import Freezable
 from nnenum.timerutil import Timers
+from nnenum.util import Freezable
 
 
 class DisjunctiveSpec(Freezable):
