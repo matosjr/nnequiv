@@ -1,3 +1,4 @@
+from typing import List
 import copy
 from collections import namedtuple
 from enum import Enum, auto
@@ -10,7 +11,7 @@ from nnenum.settings import Settings
 from nnenum.timerutil import Timers
 from nnenum.zonotope import Zonotope
 from nnequiv.global_state import GLOBAL_STATE
-from nnequiv.equivalence_properties.settings import Settings as NNEquivSettings
+from nnequiv.equivalence_properties import NNEquivSettings
 """
 Encapsulates the Split Decision.
 DNC(=DON'T CARE) is used for object comparison
@@ -346,7 +347,7 @@ class ZonoState:
 	Overapproximates the Zonotope for the given index
 	"""
 
-    def overapproximate(self, index, networks: [NeuralNetwork]):
+    def overapproximate(self, index, networks: List[NeuralNetwork]):
         Timers.tic("overapprox")
         row = self.zono.mat_t[index]
         bias = self.zono.center[index]
@@ -369,7 +370,7 @@ class ZonoState:
 	Action taken depends on spit_decision
 	"""
 
-    def do_first_relu_split(self, networks: [NeuralNetwork]):
+    def do_first_relu_split(self, networks: List[NeuralNetwork]):
         # TODO(steuber): Maybe reorder: Only create child zono if feasible?
         Timers.tic("do_first_relu_split")
         network = networks[self.cur_network]
@@ -424,7 +425,7 @@ class ZonoState:
 	Propagates the ZonoState through the (linear) layer
 	"""
 
-    def propagate_layer(self, networks: [NeuralNetwork]):
+    def propagate_layer(self, networks: List[NeuralNetwork]):
         Timers.tic("propagate_layer")
         network = networks[self.cur_network]
         layer = network.layers[self.cur_layer]
@@ -448,7 +449,7 @@ class ZonoState:
 	Propagates the ZonoState up to the next split.
 	"""
 
-    def propagate_up_to_split(self, networks: [NeuralNetwork]):
+    def propagate_up_to_split(self, networks: List[NeuralNetwork]):
         Timers.tic("propagate_up_to_split")
         while not self.is_finished(networks):
             network = networks[self.cur_network]
@@ -484,7 +485,7 @@ class ZonoState:
 	the ZonoState is moved to the next network
 	"""
 
-    def is_finished(self, networks: [NeuralNetwork]):
+    def is_finished(self, networks: List[NeuralNetwork]):
         Timers.tic("is_finished")
         if not self.active:
             Timers.toc("is_finished")

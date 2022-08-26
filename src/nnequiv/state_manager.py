@@ -1,3 +1,4 @@
+from typing import List
 import copy
 import sys
 from collections import deque
@@ -13,7 +14,7 @@ from nnequiv.equivalence_properties import EquivalenceProperty
 from nnequiv.global_state import GLOBAL_STATE
 from nnequiv.refinement import Refinement
 from nnequiv.zono_state import ZonoState
-from nnequiv.equivalence_properties import Settings as NNEquivSettings
+from nnequiv.equivalence_properties import NNEquivSettings
 """
 Wrapper object (legacy reasons, might be removed soon)
 """
@@ -50,7 +51,7 @@ Class which manages the ZonoState objects and implements the generic check and c
 
 class StateManager:
     def __init__(
-        self, init: ZonoState, property: EquivalenceProperty, networks: [NeuralNetwork]
+        self, init: ZonoState, property: EquivalenceProperty, networks: List[NeuralNetwork]
     ):
         self.enumeration_stack = [EnumerationStackElement(init)]
         self.property = property

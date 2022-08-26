@@ -1,6 +1,6 @@
 from nnenum.util import FreezableMeta
 
-class Settings(metaclass=FreezableMeta):
+class NNEquivSettings(metaclass=FreezableMeta):
     EQUIV_STRATEGIES = [
         "DONT",
         "CEGAR",
