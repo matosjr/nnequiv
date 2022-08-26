@@ -65,7 +65,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 name = "coloredlogs"
 version = "15.0.1"
 description = "Colored terminal output for Python's logging module"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
@@ -92,7 +92,7 @@ pyflakes = ">=2.5.0,<2.6.0"
 name = "flatbuffers"
 version = "2.0.7"
 description = "The FlatBuffers serialization format for Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -100,7 +100,7 @@ python-versions = "*"
 name = "humanfriendly"
 version = "10.0"
 description = "Human friendly output for text interfaces using Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
@@ -133,7 +133,7 @@ pipfile_deprecated_finder = ["requirementslib", "pipreqs"]
 name = "joblib"
 version = "1.1.0"
 description = "Lightweight pipelining with Python functions"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -149,7 +149,7 @@ python-versions = ">=3.6"
 name = "mpmath"
 version = "1.2.1"
 description = "Python library for arbitrary-precision floating-point arithmetic"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -169,10 +169,10 @@ python-versions = "*"
 name = "nnenum"
 version = "0.1.0"
 description = ""
-category = "dev"
+category = "main"
 optional = false
 python-versions = "^3.8,<3.11"
-develop = false
+develop = true
 
 [package.dependencies]
 numpy = "1.23.2"
@@ -192,7 +192,7 @@ url = "libs/nnenum"
 name = "numpy"
 version = "1.23.2"
 description = "NumPy is the fundamental package for array computing with Python."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 
@@ -200,7 +200,7 @@ python-versions = ">=3.8"
 name = "onnx"
 version = "1.12.0"
 description = "Open Neural Network Exchange"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -216,7 +216,7 @@ lint = ["clang-format (==13.0.0)", "flake8", "mypy (==0.782)", "types-protobuf (
 name = "onnxconverter-common"
 version = "1.12.2"
 description = "ONNX Converter and Optimization Tools"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -229,7 +229,7 @@ protobuf = "*"
 name = "onnxruntime"
 version = "1.12.1"
 description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -245,7 +245,7 @@ sympy = "*"
 name = "packaging"
 version = "21.3"
 description = "Core utilities for Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -288,7 +288,7 @@ dev = ["tox", "pre-commit"]
 name = "protobuf"
 version = "3.20.1"
 description = "Protocol Buffers"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -320,7 +320,7 @@ python-versions = ">=3.6"
 name = "pyparsing"
 version = "3.0.9"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6.8"
 
@@ -331,7 +331,7 @@ diagrams = ["jinja2", "railroad-diagrams"]
 name = "pyreadline3"
 version = "3.4.1"
 description = "A python implementation of GNU readline."
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -360,7 +360,7 @@ testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.
 name = "scikit-learn"
 version = "1.1.2"
 description = "A set of python modules for machine learning and data mining"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 
@@ -380,7 +380,7 @@ benchmark = ["memory-profiler (>=0.57.0)", "pandas (>=1.0.5)", "matplotlib (>=3.
 name = "scipy"
 version = "1.9.0"
 description = "SciPy: Scientific Library for Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.8,<3.12"
 
@@ -391,7 +391,7 @@ numpy = ">=1.18.5,<1.25.0"
 name = "skl2onnx"
 version = "1.12"
 description = "Convert scikit-learn models to ONNX"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -407,7 +407,7 @@ scipy = ">=1.0"
 name = "swiglpk"
 version = "5.0.5"
 description = "swiglpk - Simple swig bindings for the GNU Linear Programming Kit"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -415,7 +415,7 @@ python-versions = "*"
 name = "sympy"
 version = "1.11"
 description = "Computer algebra system (CAS) in Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 
@@ -426,7 +426,7 @@ mpmath = ">=0.19"
 name = "termcolor"
 version = "1.1.0"
 description = "ANSII Color formatting for output in terminal."
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -434,7 +434,7 @@ python-versions = "*"
 name = "threadpoolctl"
 version = "3.1.0"
 description = "threadpoolctl"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -450,14 +450,14 @@ python-versions = ">=3.7"
 name = "typing-extensions"
 version = "4.3.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.11"
-content-hash = "be97f2dfa8140fc96fa491fca861723612c5cf87a1b61d90408c2485235374de"
+content-hash = "32b6c017217cf5a655c7a5467cccff63b267c8235edd67576fcbe13afba064a8"
 
 [metadata.files]
 atomicwrites = [

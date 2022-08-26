@@ -6,13 +6,13 @@ authors = ["João Batista Pereira Matos Júnior <matosjunior.jb@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8,<3.11"
+nnenum = {path = "libs/nnenum", develop = true}
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"
 isort = "^5.10.1"
 flake8 = "^5.0.4"
 pytest = "^7.1.2"
-nnenum = {path = "libs/nnenum"}
 
 [tool.isort]
 profile = "black"
