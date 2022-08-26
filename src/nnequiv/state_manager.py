@@ -14,7 +14,7 @@ from nnequiv.equivalence_properties import EquivalenceProperty
 from nnequiv.global_state import GLOBAL_STATE
 from nnequiv.refinement import Refinement
 from nnequiv.zono_state import ZonoState
-from nnequiv.equivalence_properties import NNEquivSettings
+from nnequiv.settings import NNEquivSettings
 """
 Wrapper object (legacy reasons, might be removed soon)
 """

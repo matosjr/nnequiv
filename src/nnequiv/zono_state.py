@@ -11,7 +11,7 @@ from nnenum.settings import Settings
 from nnenum.timerutil import Timers
 from nnenum.zonotope import Zonotope
 from nnequiv.global_state import GLOBAL_STATE
-from nnequiv.equivalence_properties import NNEquivSettings
+from nnequiv.settings import NNEquivSettings
 """
 Encapsulates the Split Decision.
 DNC(=DON'T CARE) is used for object comparison
