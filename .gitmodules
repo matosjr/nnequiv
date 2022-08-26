@@ -1,0 +1,4 @@
+[submodule "libs/nnenum"]
+	path = libs/nnenum
+	url = https://github.com/matosjr/nnenum.git
+	branch = main
